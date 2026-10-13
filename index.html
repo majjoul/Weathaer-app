@@ -277,7 +277,11 @@
         navAlerts: "الإنذارات",
         noAlerts: "لا توجد تحذيرات حالية",
         noAlertsDesc: "النظام يعمل بشكل سليم.",
-        loading: "جاري التحميل..."
+        loading: "جاري التحميل...",
+        sunriseAlertTitle: "🌅 موعد الشروق",
+        sunriseAlertMsg: "لقد شرقت الشمس الآن، انطلق ليبدأ يومك بنشاط!",
+        sunsetAlertTitle: "🌇 موعد الغروب",
+        sunsetAlertMsg: "غابت الشمس الآن، أوقات ممتعة في أجواء المساء!"
       },
       en: {
         appTitle: "Smart Weather & Alert App",
@@ -304,7 +308,11 @@
         navAlerts: "Alerts",
         noAlerts: "No Active Warnings",
         noAlertsDesc: "System is operating normally.",
-        loading: "Loading..."
+        loading: "Loading...",
+        sunriseAlertTitle: "🌅 Sunrise Alert",
+        sunriseAlertMsg: "The sun has just risen. Have a wonderful day ahead!",
+        sunsetAlertTitle: "🌇 Sunset Alert",
+        sunsetAlertMsg: "The sun has set. Enjoy your evening!"
       },
       fr: {
         appTitle: "Météo Intelligente & Alertes",
@@ -331,7 +339,11 @@
         navAlerts: "Avertissements",
         noAlerts: "Aucune Alerte Active",
         noAlertsDesc: "Le système fonctionne normalement.",
-        loading: "Chargement..."
+        loading: "Chargement...",
+        sunriseAlertTitle: "🌅 Alerte Lever du Soleil",
+        sunriseAlertMsg: "Le soleil vient de se lever. Passez une excellente journée !",
+        sunsetAlertTitle: "🌇 Alerte Coucher du Soleil",
+        sunsetAlertMsg: "Le soleil s'est couché. Profitez de votre soirée !"
       }
     };
 
@@ -398,6 +410,11 @@
       return { t: currentLang === 'ar' ? 'غائم' : currentLang === 'fr' ? 'Nuageux' : 'Cloudy', i: 'cloud' };
     }
 
+    let globalSunrise = null;
+    let globalSunset = null;
+    let notifiedSunriseToday = false;
+    let notifiedSunsetToday = false;
+
     function applyDynamicTheme(temp, code, isDay, sunriseStr, sunsetStr) {
       const container = document.getElementById('appContainer');
       let appGradient = '';
@@ -405,7 +422,14 @@
       let primaryCyan = '#00f2fe';
 
       const now = new Date();
-      const currentTimeStr = now.toTimeString().slice(0, 5);
+      const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      // حفظ أوقات الشروق والغروب للمراقبة الحية
+      if (sunriseStr) globalSunrise = sunriseStr.slice(0, 5);
+      if (sunsetStr) globalSunset = sunsetStr.slice(0, 5);
+
+      // فحص أوقات التنبيه اللحظي للشروق والغروب
+      checkSunAlerts(currentTimeStr);
 
       const isSunsetTime = sunsetStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunsetStr.slice(0,2))) <= 1;
       const isSunriseTime = sunriseStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunriseStr.slice(0,2))) <= 1;
@@ -439,6 +463,20 @@
       container.style.background = appGradient;
       document.body.style.background = bodyColor;
       document.documentElement.style.setProperty('--primary-cyan', primaryCyan);
+    }
+
+    function checkSunAlerts(currentTimeStr) {
+      const t = translations[currentLang];
+      if (globalSunrise && currentTimeStr === globalSunrise && !notifiedSunriseToday) {
+        notifiedSunriseToday = true;
+        showBanner(t.sunriseAlertTitle, t.sunriseAlertMsg);
+        beep();
+      }
+      if (globalSunset && currentTimeStr === globalSunset && !notifiedSunsetToday) {
+        notifiedSunsetToday = true;
+        showBanner(t.sunsetAlertTitle, t.sunsetAlertMsg);
+        beep();
+      }
     }
 
     let tempChartInstance = null;
@@ -492,12 +530,10 @@
 
       radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
 
-      // خريطة مجانية 100% بدون أي مفاتيح API وبألوان داكنة تتناسب مع التصميم
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
       }).addTo(radarMapInstance);
 
-      // طبقة رادار الطقس الحية المجانية
       L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
         opacity: 0.65,
         maxZoom: 19
@@ -514,7 +550,6 @@
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
       
-      // إزالة التحديد عن الأزرار العلوية إن وجدت
       document.getElementById('radarBtn').style.borderColor = 'var(--glass-border)';
 
       if (pageId === 'radar') {
@@ -713,6 +748,13 @@
 
     lucide.createIcons();
     initApp();
+
+    // فحص دوري كل دقيقة للتحقق من أوقات الشروق والغروب
+    setInterval(() => {
+      const now = new Date();
+      const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      checkSunAlerts(currentTimeStr);
+    }, 60000);
   </script>
 </body>
 </html>
