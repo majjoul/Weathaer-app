@@ -1,760 +1,1051 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl" id="htmlRoot" translate="no">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="google" content="notranslate">
-  <title id="appTitle">تطبيق الطقس والإنذار الذكي</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
-  
-  <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
 
-  <style>
-    :root {
-      --bg-gradient: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0a0c10 100%);
-      --glass-bg: rgba(22, 27, 34, 0.65);
-      --glass-border: rgba(255, 255, 255, 0.12);
-      --primary-cyan: #00f2fe;
-      --primary-blue: #4facfe;
-      --danger-red: #ff3366;
-      --danger-glow: rgba(255, 51, 102, 0.4);
-      --warning-amber: #ffb703;
-      --text-main: #ffffff;
-      --text-muted: #a0aec0;
+/* =========================
+   1. الإعدادات
+========================= */
+
+const SUPABASE_URL = 'https://pueegfwjftltzlvrhyww.supabase.co';
+const SUPABASE_ANON_KEY = 'Sb_publishable_bEHmHW3g4CI7Wjp1D1lhWg_81MK0FS0';
+
+let supabaseClient = null;
+
+try {
+  if (window.supabase?.createClient) {
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+  }
+} catch (error) {
+  console.error('Supabase initialization failed:', error);
+}
+
+const languages = ['ar', 'en', 'fr'];
+let langIndex = 0;
+let currentLang = 'ar';
+
+let latestWeather = null;
+let latestAlerts = [];
+let tempChartInstance = null;
+let radarMapInstance = null;
+let rainLayer = null;
+let userMarker = null;
+let globalSunrise = null;
+let globalSunset = null;
+let globalUtcOffset = 0;
+let sunAlertDate = '';
+let notifiedSunriseToday = false;
+let notifiedSunsetToday = false;
+let lastAlertSignature = '';
+let weatherRequestId = 0;
+let refreshTimer = null;
+let radarRequestId = 0;
+
+const translations = {
+  ar: {
+    appTitle: 'تطبيق الطقس والإنذار الذكي',
+    wind: 'سرعة الرياح',
+    humidity: 'الرطوبة',
+    status: 'اتجاه الرياح',
+    aiAssistant: 'نصائح الطقس',
+    hourlyTitle: 'توقعات الساعات القادمة',
+    chartTitle: '📈 منحنى تغير درجات الحرارة',
+    radarTitle: '🛰️ خريطة الأمطار',
+    radarBtnText: '🛰️ رادار',
+    dailyTitle: 'توقعات الأيام القادمة',
+    alertsTitle: 'لوحة الإنذارات',
+    guideTitle: '📖 دليل استخدام التطبيق',
+    g1Title: 'بيانات الطقس',
+    g1Desc: 'يعرض بيانات الطقس المتاحة للموقع المحدد. قد تختلف دقة التوقعات حسب المنطقة.',
+    g2Title: 'التنبيهات',
+    g2Desc: 'يعرض التنبيهات المحمّلة من قاعدة البيانات. إشعارات الخلفية تحتاج إعدادًا إضافيًا.',
+    g3Title: 'ألوان ديناميكية',
+    g3Desc: 'تتغير ألوان التطبيق وفق درجة الحرارة والوقت وحالة الطقس.',
+    navHome: 'الرئيسية',
+    navHourly: 'الساعات',
+    navDaily: 'الأيام',
+    navAlerts: 'الإنذارات',
+    noAlerts: 'لا توجد تنبيهات في قاعدة البيانات',
+    noAlertsDesc: 'هذا لا يضمن عدم وجود تحذيرات رسمية في منطقتك.',
+    alertsError: 'تعذّر تحميل التنبيهات',
+    alertsErrorDesc: 'تحقق من الاتصال وإعدادات Supabase ثم حاول مجددًا.',
+    loading: 'جاري التحميل...',
+    weatherError: 'تعذّر تحميل بيانات الطقس. تحقق من اتصالك وحاول مجددًا.',
+    locationLoading: 'جاري تحديد الموقع...',
+    locationDenied: 'تعذّر تحديد الموقع؛ يتم استخدام الموقع الافتراضي.',
+    windDirections: ['شمال', 'شمال شرقي', 'شرق', 'جنوب شرقي',
+      'جنوب', 'جنوب غربي', 'غرب', 'شمال غربي'],
+    sunriseAlertTitle: '🌅 موعد الشروق',
+    sunriseAlertMsg: 'حان وقت شروق الشمس تقريبًا.',
+    sunsetAlertTitle: '🌇 موعد الغروب',
+    sunsetAlertMsg: 'حان وقت غروب الشمس تقريبًا.',
+    hotTip: 'الجو حار؛ اشرب الماء بانتظام وخذ فترات راحة في مكان بارد.',
+    coldTip: 'الجو بارد؛ ارتدِ ملابس مناسبة للطقس.',
+    rainTip: 'توجد أمطار أو ظروف جوية رطبة؛ تحقق من حالة الطرق قبل الخروج.',
+    stormTip: 'قد توجد عواصف رعدية؛ تابع التحذيرات الرسمية المحلية.',
+    mildTip: 'تحقق من التوقعات المحلية قبل التخطيط للأنشطة الخارجية.',
+    windUnit: 'كم/س',
+    mapError: 'تعذّر تحميل طبقة الأمطار؛ الخريطة الأساسية ما زالت متاحة.',
+    weatherSource: 'مصدر الطقس: Open-Meteo',
+    locationLabel: 'الموقع',
+    updated: 'آخر تحديث',
+    chartTemp: 'درجة الحرارة °م'
+  },
+
+  en: {
+    appTitle: 'Smart Weather & Alerts',
+    wind: 'Wind speed',
+    humidity: 'Humidity',
+    status: 'Wind direction',
+    aiAssistant: 'Weather advice',
+    hourlyTitle: 'Hourly forecast',
+    chartTitle: '📈 Temperature trend',
+    radarTitle: '🛰️ Rain map',
+    radarBtnText: '🛰️ Radar',
+    dailyTitle: 'Upcoming days',
+    alertsTitle: 'Alerts dashboard',
+    guideTitle: '📖 User guide',
+    g1Title: 'Weather data',
+    g1Desc: 'Displays available weather data for the selected location. Forecast accuracy varies by region.',
+    g2Title: 'Alerts',
+    g2Desc: 'Displays alerts loaded from the database. Background notifications require extra setup.',
+    g3Title: 'Dynamic colors',
+    g3Desc: 'App colors adapt to temperature, time, and weather conditions.',
+    navHome: 'Home',
+    navHourly: 'Hourly',
+    navDaily: 'Days',
+    navAlerts: 'Alerts',
+    noAlerts: 'No alerts found in the database',
+    noAlertsDesc: 'This does not guarantee that no official warnings exist in your area.',
+    alertsError: 'Could not load alerts',
+    alertsErrorDesc: 'Check your connection and Supabase settings, then try again.',
+    loading: 'Loading...',
+    weatherError: 'Could not load weather data. Check your connection and try again.',
+    locationLoading: 'Locating...',
+    locationDenied: 'Location unavailable; using the default location.',
+    windDirections: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+    sunriseAlertTitle: '🌅 Sunrise',
+    sunriseAlertMsg: 'It is approximately sunrise time.',
+    sunsetAlertTitle: '🌇 Sunset',
+    sunsetAlertMsg: 'It is approximately sunset time.',
+    hotTip: 'It is hot. Drink water regularly and take breaks in a cool place.',
+    coldTip: 'It is cold. Wear clothing suitable for the weather.',
+    rainTip: 'Wet weather or rain is expected. Check road conditions before travelling.',
+    stormTip: 'Thunderstorms may occur. Follow local official warnings.',
+    mildTip: 'Check the local forecast before planning outdoor activities.',
+    windUnit: 'km/h',
+    mapError: 'Could not load the rain layer; the base map is still available.',
+    weatherSource: 'Weather source: Open-Meteo',
+    locationLabel: 'Location',
+    updated: 'Updated',
+    chartTemp: 'Temperature °C'
+  },
+
+  fr: {
+    appTitle: 'Météo intelligente et alertes',
+    wind: 'Vitesse du vent',
+    humidity: 'Humidité',
+    status: 'Direction du vent',
+    aiAssistant: 'Conseils météo',
+    hourlyTitle: 'Prévisions horaires',
+    chartTitle: '📈 Évolution de la température',
+    radarTitle: '🛰️ Carte des précipitations',
+    radarBtnText: '🛰️ Radar',
+    dailyTitle: 'Prévisions des prochains jours',
+    alertsTitle: 'Tableau des alertes',
+    guideTitle: '📖 Guide utilisateur',
+    g1Title: 'Données météo',
+    g1Desc: 'Affiche les données météo disponibles pour le lieu choisi. La précision varie selon la région.',
+    g2Title: 'Alertes',
+    g2Desc: 'Affiche les alertes chargées depuis la base de données. Les notifications en arrière-plan nécessitent une configuration supplémentaire.',
+    g3Title: 'Couleurs dynamiques',
+    g3Desc: 'Les couleurs s’adaptent à la température, à l’heure et aux conditions météo.',
+    navHome: 'Accueil',
+    navHourly: 'Heures',
+    navDaily: 'Jours',
+    navAlerts: 'Alertes',
+    noAlerts: 'Aucune alerte dans la base de données',
+    noAlertsDesc: 'Cela ne garantit pas l’absence d’alertes officielles dans votre région.',
+    alertsError: 'Impossible de charger les alertes',
+    alertsErrorDesc: 'Vérifiez la connexion et la configuration Supabase.',
+    loading: 'Chargement...',
+    weatherError: 'Impossible de charger la météo. Vérifiez votre connexion.',
+    locationLoading: 'Localisation...',
+    locationDenied: 'Localisation indisponible ; utilisation du lieu par défaut.',
+    windDirections: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
+    sunriseAlertTitle: '🌅 Lever du soleil',
+    sunriseAlertMsg: 'C’est approximativement l’heure du lever du soleil.',
+    sunsetAlertTitle: '🌇 Coucher du soleil',
+    sunsetAlertMsg: 'C’est approximativement l’heure du coucher du soleil.',
+    hotTip: 'Il fait chaud. Buvez régulièrement de l’eau et faites des pauses au frais.',
+    coldTip: 'Il fait froid. Portez des vêtements adaptés.',
+    rainTip: 'Des précipitations sont possibles. Vérifiez les conditions routières.',
+    stormTip: 'Des orages sont possibles. Suivez les alertes officielles locales.',
+    mildTip: 'Consultez les prévisions locales avant une activité extérieure.',
+    windUnit: 'km/h',
+    mapError: 'Impossible de charger les précipitations ; la carte reste disponible.',
+    weatherSource: 'Source météo : Open-Meteo',
+    locationLabel: 'Lieu',
+    updated: 'Mis à jour',
+    chartTemp: 'Température °C'
+  }
+};
+
+function tr(key) {
+  return translations[currentLang]?.[key] ??
+    translations.en[key] ??
+    key;
+}
+
+/* =========================
+   2. الترجمة
+========================= */
+
+function toggleLanguage() {
+  langIndex = (langIndex + 1) % languages.length;
+  currentLang = languages[langIndex];
+
+  const root = document.getElementById('htmlRoot');
+  root.lang = currentLang;
+  root.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+
+  document.getElementById('langBtn').textContent =
+    languages[(langIndex + 1) % languages.length].toUpperCase();
+
+  document.title = tr('appTitle');
+  document.getElementById('appTitle').textContent = tr('appTitle');
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (translations[currentLang][key]) {
+      el.textContent = tr(key);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; transition: background 0.5s ease; }
-    body { background: #080a0f; color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
-    .app-container { width: 100%; max-width: 420px; height: 780px; background: var(--bg-gradient); border-radius: 35px; padding: 20px 16px 80px 16px; box-shadow: 0 30px 60px rgba(0,0,0,.8), 0 0 40px rgba(0,242,254,.15); border: 1px solid var(--glass-border); position: relative; overflow: hidden; backdrop-filter: blur(20px); display: flex; flex-direction: column; }
-    .glow-sphere-1 { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,242,254,.3) 0%, transparent 70%); z-index: 0; pointer-events: none; }
-    .glow-sphere-2 { position: absolute; bottom: 100px; left: -80px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,51,102,.25) 0%, transparent 70%); z-index: 0; pointer-events: none; }
-    .content-wrapper { position: relative; z-index: 1; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
-    .content-wrapper::-webkit-scrollbar { display: none; }
-    .header { display: flex; justify-content: space-between; align-items: center; }
-    .location-box { display: flex; align-items: center; gap: 8px; }
-    .location-title { font-size: 1.05rem; font-weight: 700; }
-    .header-actions { display: flex; gap: 8px; }
-    .icon-btn { background: rgba(255,255,255,.08); border: 1px solid var(--glass-border); color: #fff; height: 40px; padding: 0 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
-    .icon-btn.spin svg { animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .page-section { display: none; flex-direction: column; gap: 16px; animation: fadeIn .3s ease-in-out; }
-    .page-section.active { display: flex; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .main-weather-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 26px; padding: 22px 18px; text-align: center; backdrop-filter: blur(15px); }
-    .weather-icon-wrap { display: flex; justify-content: center; margin-bottom: 8px; }
-    .temp-number { font-size: 3.5rem; font-weight: 900; background: linear-gradient(180deg, #fff 30%, #a0aec0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 5px; direction: ltr; }
-    .weather-status { font-size: 1.05rem; color: var(--primary-cyan); font-weight: 700; margin-bottom: 16px; }
-    .weather-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: rgba(0,0,0,.25); padding: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,.05); }
-    .stat-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-    .stat-label { font-size: .7rem; color: var(--text-muted); }
-    .stat-value { font-size: .9rem; font-weight: 700; }
-    .hourly-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
-    .hourly-scroll::-webkit-scrollbar { height: 4px; }
-    .hourly-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 4px; }
-    .hour-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 12px 10px; min-width: 65px; display: flex; flex-direction: column; align-items: center; gap: 8px; backdrop-filter: blur(10px); }
-    .hour-time { font-size: .75rem; color: var(--text-muted); direction: ltr; }
-    .hour-temp { font-size: .95rem; font-weight: 700; direction: ltr; }
-    .daily-list { display: flex; flex-direction: column; gap: 10px; }
-    .day-row { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(10px); }
-    .day-name { font-weight: 700; font-size: .95rem; }
-    .day-temp { font-weight: 700; color: var(--primary-cyan); direction: ltr; }
-    
-    #radarMap { width: 100%; height: 350px; border-radius: 18px; border: 1px solid var(--glass-border); z-index: 1; }
-    .leaflet-container { background: #080a0f !important; font-family: 'Tajawal', sans-serif !important; border-radius: 18px; }
+  });
 
-    .guide-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .guide-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; backdrop-filter: blur(10px); }
-    .guide-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(0,242,254,0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-cyan); flex-shrink: 0; }
-    .guide-content h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
-    .guide-content p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+  if (latestWeather) renderWeather(latestWeather);
+  renderAlerts();
+  updateChartLanguage();
 
-    .alert-card { background: linear-gradient(135deg, rgba(255,51,102,.2) 0%, rgba(20,10,20,.6) 100%); border: 1px solid var(--danger-red); border-radius: 20px; padding: 16px; box-shadow: 0 10px 25px var(--danger-glow); }
-    .alert-card.ok { background: linear-gradient(135deg, rgba(0,242,254,.12) 0%, rgba(20,10,20,.6) 100%); border-color: rgba(0,242,254,.4); box-shadow: none; }
-    .alert-card.ok .alert-header { color: var(--primary-cyan); }
-    .alert-card.ok .alert-body { color: #e2e8f0; }
-    .alert-header { display: flex; align-items: center; gap: 8px; color: var(--danger-red); font-weight: 800; font-size: 1rem; margin-bottom: 6px; }
-    .alert-body { font-size: .88rem; color: #ffd6e0; line-height: 1.4; }
-    
-    .bottom-nav { position: absolute; bottom: 12px; left: 16px; right: 16px; height: 60px; background: rgba(13,17,23,.85); border: 1px solid var(--glass-border); border-radius: 20px; display: flex; justify-content: space-around; align-items: center; backdrop-filter: blur(20px); z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
-    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-size: .7rem; font-weight: 600; transition: all .2s ease; }
-    .nav-item.active { color: var(--primary-cyan); }
+  lucide.createIcons();
+}
 
-    .alert-banner { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 50; background: linear-gradient(135deg, #ff3366, #b3123a); border-radius: 18px; padding: 14px 16px; box-shadow: 0 10px 30px var(--danger-glow); transform: translateY(-140%); transition: transform .4s ease; cursor: pointer; }
-    .alert-banner.show { transform: translateY(0); animation: shake .5s ease 2; }
-    .alert-banner .ab-title { font-weight: 900; font-size: 1rem; margin-bottom: 4px; }
-    .alert-banner .ab-msg { font-size: .85rem; line-height: 1.4; }
-    @keyframes shake { 0%,100% { margin-left: 0; } 25% { margin-left: -6px; } 75% { margin-left: 6px; } }
-    .bell-badge { position: relative; }
-    .bell-badge.has-alert::after { content: ''; position: absolute; top: -2px; right: 8px; width: 9px; height: 9px; background: var(--danger-red); border-radius: 50%; box-shadow: 0 0 8px var(--danger-red); }
-  </style>
-</head>
-<body>
+function updateChartLanguage() {
+  if (!tempChartInstance) return;
 
-  <div class="app-container" id="appContainer">
-    <div class="glow-sphere-1"></div>
-    <div class="glow-sphere-2"></div>
-    <div class="alert-banner" id="alertBanner" onclick="hideBanner()">
-      <div class="ab-title" id="abTitle"></div>
-      <div class="ab-msg" id="abMsg"></div>
-    </div>
+  tempChartInstance.data.datasets[0].label = tr('chartTemp');
+  tempChartInstance.update();
+}
 
-    <div class="content-wrapper">
+/* =========================
+   3. رموز الطقس
+========================= */
 
-      <div class="header">
-        <div class="location-box">
-          <i data-lucide="map-pin" style="color: var(--primary-cyan);"></i>
-          <span class="location-title" id="cityName">جاري تحديد الموقع...</span>
-        </div>
-        <div class="header-actions">
-          <button class="icon-btn" id="radarBtn" onclick="switchPage('radar', this)" data-i18n="radarBtnText">🛰️ رادار</button>
-          <button class="icon-btn" id="langBtn" onclick="toggleLanguage()">FR</button>
-          <button class="icon-btn" id="refreshBtn" onclick="initApp()">
-            <i data-lucide="rotate-cw" style="width:18px;height:18px;"></i>
-          </button>
-        </div>
-      </div>
+const WEATHER_CODES = {
+  0:  { ar: 'صافي', en: 'Clear', fr: 'Dégagé', i: 'sun' },
+  1:  { ar: 'غالبًا صافٍ', en: 'Mainly clear', fr: 'Peu nuageux', i: 'sun' },
+  2:  { ar: 'غائم جزئيًا', en: 'Partly cloudy', fr: 'Partiellement nuageux', i: 'cloud-sun' },
+  3:  { ar: 'غائم', en: 'Overcast', fr: 'Couvert', i: 'cloud' },
+  45: { ar: 'ضباب', en: 'Fog', fr: 'Brouillard', i: 'cloud-fog' },
+  48: { ar: 'ضباب متجمد', en: 'Depositing rime fog', fr: 'Brouillard givrant', i: 'cloud-fog' },
+  51: { ar: 'رذاذ خفيف', en: 'Light drizzle', fr: 'Bruine légère', i: 'cloud-drizzle' },
+  53: { ar: 'رذاذ متوسط', en: 'Moderate drizzle', fr: 'Bruine modérée', i: 'cloud-drizzle' },
+  55: { ar: 'رذاذ كثيف', en: 'Dense drizzle', fr: 'Bruine dense', i: 'cloud-drizzle' },
+  56: { ar: 'رذاذ متجمد خفيف', en: 'Light freezing drizzle', fr: 'Bruine verglaçante légère', i: 'cloud-snow' },
+  57: { ar: 'رذاذ متجمد كثيف', en: 'Dense freezing drizzle', fr: 'Bruine verglaçante dense', i: 'cloud-snow' },
+  61: { ar: 'مطر خفيف', en: 'Light rain', fr: 'Pluie faible', i: 'cloud-rain' },
+  63: { ar: 'مطر متوسط', en: 'Moderate rain', fr: 'Pluie modérée', i: 'cloud-rain' },
+  65: { ar: 'مطر غزير', en: 'Heavy rain', fr: 'Forte pluie', i: 'cloud-rain' },
+  66: { ar: 'مطر متجمد خفيف', en: 'Light freezing rain', fr: 'Pluie verglaçante légère', i: 'cloud-snow' },
+  67: { ar: 'مطر متجمد غزير', en: 'Heavy freezing rain', fr: 'Forte pluie verglaçante', i: 'cloud-snow' },
+  71: { ar: 'ثلج خفيف', en: 'Light snow', fr: 'Faible neige', i: 'cloud-snow' },
+  73: { ar: 'ثلج متوسط', en: 'Moderate snow', fr: 'Neige modérée', i: 'cloud-snow' },
+  75: { ar: 'ثلج غزير', en: 'Heavy snow', fr: 'Forte neige', i: 'cloud-snow' },
+  77: { ar: 'حبيبات ثلجية', en: 'Snow grains', fr: 'Neige en grains', i: 'snowflake' },
+  80: { ar: 'زخات مطر خفيفة', en: 'Light rain showers', fr: 'Averses faibles', i: 'cloud-rain' },
+  81: { ar: 'زخات مطر متوسطة', en: 'Moderate rain showers', fr: 'Averses modérées', i: 'cloud-rain' },
+  82: { ar: 'زخات مطر قوية', en: 'Violent rain showers', fr: 'Fortes averses', i: 'cloud-rain' },
+  85: { ar: 'زخات ثلج خفيفة', en: 'Light snow showers', fr: 'Averses de neige faibles', i: 'cloud-snow' },
+  86: { ar: 'زخات ثلج قوية', en: 'Heavy snow showers', fr: 'Fortes averses de neige', i: 'cloud-snow' },
+  95: { ar: 'عاصفة رعدية', en: 'Thunderstorm', fr: 'Orage', i: 'cloud-lightning' },
+  96: { ar: 'عاصفة رعدية وبَرَد', en: 'Thunderstorm with hail', fr: 'Orage avec grêle', i: 'cloud-lightning' },
+  99: { ar: 'عاصفة رعدية وبَرَد شديد', en: 'Severe hail thunderstorm', fr: 'Orage avec forte grêle', i: 'cloud-lightning' }
+};
 
-      <!-- الرئيسية -->
-      <div id="page-home" class="page-section active">
-        <div class="main-weather-card">
-          <div class="weather-icon-wrap" id="weatherIcon">
-            <i data-lucide="cloud-sun" style="width:65px;height:65px;color: var(--primary-cyan);"></i>
-          </div>
-          <div class="temp-number" id="tempDegree">--°</div>
-          <div class="weather-status" id="weatherState">جاري التحميل...</div>
+function wInfo(code) {
+  const item = WEATHER_CODES[code] || {
+    ar: 'حالة جوية غير معروفة',
+    en: 'Unknown conditions',
+    fr: 'Conditions inconnues',
+    i: 'cloud'
+  };
 
-          <div class="weather-stats-grid">
-            <div class="stat-item">
-              <i data-lucide="wind" style="width:16px;height:16px;color: var(--primary-cyan);"></i>
-              <span class="stat-label" data-i18n="wind">الرياح</span>
-              <span class="stat-value" id="windSpeed">-- كم/س</span>
-            </div>
-            <div class="stat-item">
-              <i data-lucide="droplets" style="width:16px;height:16px;color: var(--primary-blue);"></i>
-              <span class="stat-label" data-i18n="humidity">الرطوبة</span>
-              <span class="stat-value" id="humidity">--%</span>
-            </div>
-            <div class="stat-item">
-              <i data-lucide="compass" style="width:16px;height:16px;color: var(--warning-amber);"></i>
-              <span class="stat-label" data-i18n="status">الحالة</span>
-              <span class="stat-value" id="windDir">--</span>
-            </div>
-          </div>
-        </div>
+  return {
+    t: item[currentLang] || item.en,
+    i: item.i
+  };
+}
 
-        <div class="ai-assistant-card" style="background: linear-gradient(135deg, rgba(0,242,254,.12) 0%, rgba(79,172,254,.05) 100%); border: 1px solid rgba(0,242,254,.3); border-radius: 20px; padding: 16px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue)); display: flex; align-items: center; justify-content: center; color: #000;">
-              <i data-lucide="bot" style="width:16px;height:16px;"></i>
-            </div>
-            <span style="font-weight: 700; font-size: .95rem; color: var(--primary-cyan);" data-i18n="aiAssistant">المساعد الذكي</span>
-          </div>
-          <div id="aiAdvice" style="font-size: .88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0,0,0,.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
-            جاري تحضير بيانات الطقس...
-          </div>
-        </div>
-      </div>
-
-      <!-- الساعات مع الرسم البياني فقط -->
-      <div id="page-hourly" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="hourlyTitle">توقعات الساعات القادمة</h3>
-        <div class="hourly-scroll" id="hourlyContainer"></div>
-
-        <div class="main-weather-card" style="margin-top: 10px; padding: 16px;">
-          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="chartTitle">📈 منحنى تغير درجات الحرارة</h4>
-          <div style="position: relative; width: 100%; height: 220px;">
-            <canvas id="tempChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- صفحة خريطة الرادار المستقلة -->
-      <div id="page-radar" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="radarTitle">🛰️ رادار العواصف والأمطار الحي</h3>
-        <div class="main-weather-card" style="padding: 12px;">
-          <div id="radarMap"></div>
-        </div>
-      </div>
-
-      <!-- الأيام -->
-      <div id="page-daily" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="dailyTitle">توقعات الأسبوع</h3>
-        <div class="daily-list" id="dailyContainer"></div>
-      </div>
-
-      <!-- الإنذارات والدليل -->
-      <div id="page-alerts" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="alertsTitle">لوحة الإنذارات النشطة</h3>
-        <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;"></div>
-        
-        <h3 style="font-size: 1rem; font-weight: 700; margin-top: 10px; margin-bottom: 4px;" data-i18n="guideTitle">📖 دليل استخدام التطبيق</h3>
-        <div class="guide-grid">
-          <div class="guide-card">
-            <div class="guide-icon"><i data-lucide="cloud-sun"></i></div>
-            <div class="guide-content">
-              <h4 data-i18n="g1Title">الطقس الحي الفوري</h4>
-              <p data-i18n="g1Desc">يعرض درجات الحرارة والرطوبة والرياح المحدثة بناءً على موقعك الجغرافي الحالي بدقة.</p>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-icon"><i data-lucide="bell-ring"></i></div>
-            <div class="guide-content">
-              <h4 data-i18n="g2Title">نظام التنبيهات والـ Push</h4>
-              <p data-i18n="g2Desc">يستقبل إشعارات الطوارئ الفورية حتى لو كان التطبيق مغلقاً لحمايتك في الظروف الخطرة.</p>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-icon"><i data-lucide="palette"></i></div>
-            <div class="guide-content">
-              <h4 data-i18n="g3Title">ألوان ديناميكية ذكية</h4>
-              <p data-i18n="g3Desc">تتغير تدرجات الخلفية تلقائياً لتتناسب مع حالة الطقس الحالية (حرارة، أمطار، ليل).</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <nav class="bottom-nav">
-      <button class="nav-item active" onclick="switchPage('home', this)">
-        <i data-lucide="home" style="width:20px;height:20px;"></i><span data-i18n="navHome">الرئيسية</span>
-      </button>
-      <button class="nav-item" onclick="switchPage('hourly', this)">
-        <i data-lucide="clock" style="width:20px;height:20px;"></i><span data-i18n="navHourly">الساعات</span>
-      </button>
-      <button class="nav-item" onclick="switchPage('daily', this)">
-        <i data-lucide="calendar" style="width:20px;height:20px;"></i><span data-i18n="navDaily">الأسبوع</span>
-      </button>
-      <button class="nav-item bell-badge" id="bellBtn" onclick="switchPage('alerts', this); document.getElementById('bellBtn').classList.remove('has-alert')">
-        <i data-lucide="bell" style="width:20px;height:20px;"></i><span data-i18n="navAlerts">الإنذارات</span>
-      </button>
-    </nav>
-  </div>
-
-  <script>
-    const SUPABASE_URL = 'https://pueegfwjftltzlvrhyww.supabase.co';
-    const SUPABASE_ANON_KEY = 'Sb_publishable_bEHmHW3g4CI7Wjp1D1lhWg_81MK0FS0';
-
-    let supabaseClient = null;
-    try {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    } catch (e) {
-      console.error('Supabase Init Error:', e);
+function skyInfo(code, cloud, isDay) {
+  if ((code === 0 || code === 1) && cloud != null) {
+    if (!isDay) {
+      return {
+        t: currentLang === 'ar' ? 'صافي ليلًا' :
+           currentLang === 'fr' ? 'Ciel dégagé la nuit' : 'Clear night',
+        i: 'moon'
+      };
     }
 
-    const languages = ['ar', 'en', 'fr'];
-    let langIndex = 0;
-    let currentLang = 'ar';
+    return {
+      t: currentLang === 'ar' ? 'مشمس' :
+         currentLang === 'fr' ? 'Ensoleillé' : 'Sunny',
+      i: 'sun'
+    };
+  }
 
-    const translations = {
-      ar: {
-        appTitle: "تطبيق الطقس والإنذار الذكي",
-        wind: "الرياح",
-        humidity: "الرطوبة",
-        status: "الحالة",
-        aiAssistant: "المساعد الذكي",
-        hourlyTitle: "توقعات الساعات القادمة",
-        chartTitle: "📈 منحنى تغير درجات الحرارة",
-        radarTitle: "🛰️ رادار العواصف والأمطار الحي",
-        radarBtnText: "🛰️ رادار",
-        dailyTitle: "توقعات الأسبوع",
-        alertsTitle: "لوحة الإنذارات النشطة",
-        guideTitle: "📖 دليل استخدام التطبيق",
-        g1Title: "الطقس الحي الفوري",
-        g1Desc: "يعرض درجات الحرارة والرطوبة والرياح المحدثة بناءً على موقعك الجغرافي الحالي بدقة.",
-        g2Title: "نظام التنبيهات والـ Push",
-        g2Desc: "يستقبل إشعارات الطوارئ الفورية حتى لو كان التطبيق مغلقاً لحمايتك في الظروف الخطرة.",
-        g3Title: "ألوان ديناميكية ذكية",
-        g3Desc: "تتغير تدرجات الخلفية تلقائياً لتتناسب مع حالة الطقس الحالية (حرارة، أمطار، ليل).",
-        navHome: "الرئيسية",
-        navHourly: "الساعات",
-        navDaily: "الأسبوع",
-        navAlerts: "الإنذارات",
-        noAlerts: "لا توجد تحذيرات حالية",
-        noAlertsDesc: "النظام يعمل بشكل سليم.",
-        loading: "جاري التحميل...",
-        sunriseAlertTitle: "🌅 موعد الشروق",
-        sunriseAlertMsg: "لقد شرقت الشمس الآن، انطلق ليبدأ يومك بنشاط!",
-        sunsetAlertTitle: "🌇 موعد الغروب",
-        sunsetAlertMsg: "غابت الشمس الآن، أوقات ممتعة في أجواء المساء!"
-      },
-      en: {
-        appTitle: "Smart Weather & Alert App",
-        wind: "Wind",
-        humidity: "Humidity",
-        status: "Status",
-        aiAssistant: "AI Assistant",
-        hourlyTitle: "Hourly Forecast",
-        chartTitle: "📈 Temperature Trend Graph",
-        radarTitle: "🛰️ Live Storm & Rain Radar",
-        radarBtnText: "🛰️ Radar",
-        dailyTitle: "Weekly Forecast",
-        alertsTitle: "Active Alerts Dashboard",
-        guideTitle: "📖 App User Guide",
-        g1Title: "Live Weather",
-        g1Desc: "Displays precise real-time temperature, humidity, and wind based on your GPS location.",
-        g2Title: "Push Notifications",
-        g2Desc: "Receives emergency alerts instantly even when the app is closed to keep you safe.",
-        g3Title: "Dynamic Colors",
-        g3Desc: "Background gradients automatically adapt to current weather conditions (heat, rain, night).",
-        navHome: "Home",
-        navHourly: "Hourly",
-        navDaily: "Weekly",
-        navAlerts: "Alerts",
-        noAlerts: "No Active Warnings",
-        noAlertsDesc: "System is operating normally.",
-        loading: "Loading...",
-        sunriseAlertTitle: "🌅 Sunrise Alert",
-        sunriseAlertMsg: "The sun has just risen. Have a wonderful day ahead!",
-        sunsetAlertTitle: "🌇 Sunset Alert",
-        sunsetAlertMsg: "The sun has set. Enjoy your evening!"
-      },
-      fr: {
-        appTitle: "Météo Intelligente & Alertes",
-        wind: "Vent",
-        humidity: "Humidité",
-        status: "Condition",
-        aiAssistant: "Assistant IA",
-        hourlyTitle: "Prévisions Horaires",
-        chartTitle: "📈 Graphique de Température",
-        radarTitle: "🛰️ Radar Tempête & Pluie en Direct",
-        radarBtnText: "🛰️ Radar",
-        dailyTitle: "Prévisions Semainières",
-        alertsTitle: "Tableau des Alertes Actives",
-        guideTitle: "📖 Guide d'Utilisation",
-        g1Title: "Météo en Direct",
-        g1Desc: "Affiche la température, l'humidité et le vent en temps réel selon votre position GPS.",
-        g2Title: "Notifications Push",
-        g2Desc: "Reçoit les alertes d'urgence instantanément même lorsque l'application est fermée.",
-        g3Title: "Couleurs Dynamiques",
-        g3Desc: "Les dégradés de fond s'adaptent automatiquement aux conditions météo actuelles.",
-        navHome: "Maison",
-        navHourly: "Heures",
-        navDaily: "Semaine",
-        navAlerts: "Avertissements",
-        noAlerts: "Aucune Alerte Active",
-        noAlertsDesc: "Le système fonctionne normalement.",
-        loading: "Chargement...",
-        sunriseAlertTitle: "🌅 Alerte Lever du Soleil",
-        sunriseAlertMsg: "Le soleil vient de se lever. Passez une excellente journée !",
-        sunsetAlertTitle: "🌇 Alerte Coucher du Soleil",
-        sunsetAlertMsg: "Le soleil s'est couché. Profitez de votre soirée !"
-      }
+  return wInfo(code);
+}
+
+function getWindDirection(degrees) {
+  if (!Number.isFinite(degrees)) return '--';
+
+  const directions = tr('windDirections');
+  const index = Math.round(((degrees % 360) / 45)) % 8;
+  return directions[index];
+}
+
+/* =========================
+   4. الموقع والطقس
+========================= */
+
+function initApp() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spin');
+
+  document.getElementById('weatherState').textContent = tr('loading');
+  document.getElementById('cityName').textContent = tr('locationLoading');
+
+  fetchSupabaseAlerts();
+
+  const done = () => btn.classList.remove('spin');
+
+  if (!navigator.geolocation) {
+    fetchWeatherData(43.7102, 7.2620, 'Nice, France')
+      .finally(done);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      fetchWeatherData(
+        lat,
+        lon,
+        `${lat.toFixed(2)}, ${lon.toFixed(2)}`
+      ).finally(done);
+    },
+    () => {
+      fetchWeatherData(43.7102, 7.2620, 'Nice, France')
+        .finally(done);
+    },
+    {
+      timeout: 10000,
+      maximumAge: 300000,
+      enableHighAccuracy: false
+    }
+  );
+}
+
+async function fetchWeatherData(lat, lon, locationLabel) {
+  const requestId = ++weatherRequestId;
+
+  try {
+    const params = new URLSearchParams({
+      latitude: String(lat),
+      longitude: String(lon),
+      current: [
+        'temperature_2m',
+        'relative_humidity_2m',
+        'wind_speed_10m',
+        'wind_direction_10m',
+        'weather_code',
+        'cloud_cover',
+        'is_day'
+      ].join(','),
+      hourly: 'temperature_2m,weather_code',
+      daily: 'temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset',
+      forecast_days: '7',
+      timezone: 'auto'
+    });
+
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?${params}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Weather API HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (requestId !== weatherRequestId) return;
+    if (!data.current || !data.hourly || !data.daily) {
+      throw new Error('Incomplete weather response');
+    }
+
+    latestWeather = {
+      data,
+      lat,
+      lon,
+      locationLabel
     };
 
-    function toggleLanguage() {
-      langIndex = (langIndex + 1) % languages.length;
-      currentLang = languages[langIndex];
-      
-      const isRtl = currentLang === 'ar';
-      document.getElementById('htmlRoot').setAttribute('lang', currentLang);
-      document.getElementById('htmlRoot').setAttribute('dir', isRtl ? 'rtl' : 'ltr');
-      
-      const nextLangBtn = languages[(langIndex + 1) % languages.length].toUpperCase();
-      document.getElementById('langBtn').innerText = nextLangBtn;
-      
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (translations[currentLang][key]) {
-          el.innerText = translations[currentLang][key];
-        }
-      });
-      initApp();
-    }
+    globalUtcOffset = Number(data.utc_offset_seconds) || 0;
 
-    async function registerServiceWorkerAndPush() {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        try {
-          await navigator.serviceWorker.register('sw.js');
-          if (Notification.permission === 'default') {
-            await Notification.requestPermission();
+    globalSunrise = data.daily.sunrise?.[0]?.slice(11, 16) || null;
+    globalSunset = data.daily.sunset?.[0]?.slice(11, 16) || null;
+
+    resetSunAlertsIfNewDay(data.daily.time?.[0] || '');
+    renderWeather(latestWeather);
+    applyDynamicTheme(
+      data.current.temperature_2m,
+      data.current.weather_code,
+      data.current.is_day
+    );
+
+    initRadarMap(lat, lon);
+  } catch (error) {
+    console.error('Weather loading error:', error);
+
+    if (requestId === weatherRequestId) {
+      document.getElementById('weatherState').textContent = tr('weatherError');
+    }
+  }
+}
+
+function renderWeather(weather) {
+  if (!weather) return;
+
+  const { data, locationLabel } = weather;
+  const current = data.current;
+  const temp = Math.round(current.temperature_2m);
+  const wind = current.wind_speed_10m;
+  const humidity = current.relative_humidity_2m;
+  const windDirection = current.wind_direction_10m;
+  const code = current.weather_code;
+
+  const info = skyInfo(
+    code,
+    current.cloud_cover,
+    current.is_day
+  );
+
+  document.getElementById('cityName').textContent = locationLabel;
+  document.getElementById('tempDegree').textContent = `${temp}°`;
+  document.getElementById('windSpeed').textContent =
+    `${Math.round(wind)} ${tr('windUnit')}`;
+  document.getElementById('humidity').textContent =
+    `${Math.round(humidity)}%`;
+  document.getElementById('windDir').textContent =
+    getWindDirection(windDirection);
+  document.getElementById('weatherState').textContent = info.t;
+
+  document.getElementById('weatherIcon').innerHTML =
+    `<i data-lucide="${info.i}" style="width:65px;height:65px;color:var(--primary-cyan)"></i>`;
+
+  renderAdvice(temp, code);
+  renderHourly(data);
+  renderDaily(data);
+
+  lucide.createIcons();
+}
+
+function renderAdvice(temp, code) {
+  let advice;
+
+  if ([95, 96, 99].includes(code)) {
+    advice = tr('stormTip');
+  } else if (
+    (code >= 51 && code <= 67) ||
+    (code >= 80 && code <= 82)
+  ) {
+    advice = tr('rainTip');
+  } else if (temp >= 30) {
+    advice = tr('hotTip');
+  } else if (temp <= 15) {
+    advice = tr('coldTip');
+  } else {
+    advice = tr('mildTip');
+  }
+
+  document.getElementById('aiAdvice').textContent =
+    `${tr('weatherSource')}. ${advice}`;
+}
+
+function renderHourly(data) {
+  const container = document.getElementById('hourlyContainer');
+  container.replaceChildren();
+
+  const hourly = data.hourly;
+  const currentTime = data.current.time || '';
+  let start = hourly.time.findIndex(
+    time => time.slice(0, 13) === currentTime.slice(0, 13)
+  );
+
+  if (start < 0) {
+    start = hourly.time.findIndex(time => time >= currentTime);
+  }
+  if (start < 0) start = 0;
+
+  const labels = [];
+  const temps = [];
+
+  for (let i = start; i < Math.min(start + 24, hourly.time.length); i++) {
+    const temp = hourly.temperature_2m[i];
+    const time = hourly.time[i].slice(11, 16);
+    const info = wInfo(hourly.weather_code[i]);
+
+    labels.push(time);
+    temps.push(Math.round(temp));
+
+    const card = document.createElement('div');
+    card.className = 'hour-card';
+
+    const timeEl = document.createElement('span');
+    timeEl.className = 'hour-time';
+    timeEl.textContent = time;
+
+    const icon = document.createElement('i');
+    icon.dataset.lucide = info.i;
+    icon.style.cssText = 'width:20px;height:20px;color:var(--primary-cyan)';
+
+    const tempEl = document.createElement('span');
+    tempEl.className = 'hour-temp';
+    tempEl.textContent = `${Math.round(temp)}°`;
+
+    card.append(timeEl, icon, tempEl);
+    container.appendChild(card);
+  }
+
+  renderTempChart(labels, temps);
+  lucide.createIcons();
+}
+
+function renderDaily(data) {
+  const container = document.getElementById('dailyContainer');
+  container.replaceChildren();
+
+  const daily = data.daily;
+
+  for (let i = 0; i < daily.time.length; i++) {
+    const date = new Date(`${daily.time[i]}T12:00:00`);
+    const dayName = new Intl.DateTimeFormat(currentLang, {
+      weekday: 'long'
+    }).format(date);
+
+    const info = wInfo(daily.weather_code[i]);
+    const row = document.createElement('div');
+    row.className = 'day-row';
+
+    const day = document.createElement('span');
+    day.className = 'day-name';
+    day.textContent = dayName;
+
+    const icon = document.createElement('i');
+    icon.dataset.lucide = info.i;
+    icon.style.cssText = 'width:20px;height:20px;color:var(--primary-cyan)';
+
+    const temps = document.createElement('span');
+    temps.className = 'day-temp';
+    temps.textContent =
+      `${Math.round(daily.temperature_2m_max[i])}° / ${Math.round(daily.temperature_2m_min[i])}°`;
+
+    row.append(day, icon, temps);
+    container.appendChild(row);
+  }
+
+  lucide.createIcons();
+}
+
+/* =========================
+   5. الرسم البياني
+========================= */
+
+function renderTempChart(labels, temps) {
+  const canvas = document.getElementById('tempChart');
+  if (!canvas || !window.Chart) return;
+
+  if (tempChartInstance) {
+    tempChartInstance.destroy();
+  }
+
+  const ctx = canvas.getContext('2d');
+  const cyan = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary-cyan').trim() || '#00f2fe';
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+  gradient.addColorStop(0, `${cyan}55`);
+  gradient.addColorStop(1, `${cyan}00`);
+
+  tempChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: tr('chartTemp'),
+        data: temps,
+        borderColor: cyan,
+        borderWidth: 3,
+        pointBackgroundColor: '#fff',
+        pointBorderColor: cyan,
+        pointRadius: 3,
+        fill: true,
+        backgroundColor: gradient,
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(22,27,34,.95)'
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: '#a0aec0',
+            maxTicksLimit: 8,
+            maxRotation: 0
           }
-        } catch (e) {
-          console.warn('SW failed', e);
-        }
-      }
-    }
-    registerServiceWorkerAndPush();
-
-    const WEATHER_CODES = {
-      0:  { ar: 'صافي', en: 'Clear', fr: 'Dégagé', i: 'sun' },
-      1:  { ar: 'غالباً صافي', en: 'Mostly Clear', fr: 'Majoritairement Dégagé', i: 'sun' },
-      2:  { ar: 'غائم جزئياً', en: 'Partly Cloudy', fr: 'Partiellement Nuageux', i: 'cloud-sun' },
-      3:  { ar: 'غائم', en: 'Cloudy', fr: 'Nuageux', i: 'cloud' },
-      45: { ar: 'ضباب', en: 'Foggy', fr: 'Brouillard', i: 'cloud-fog' },
-      61: { ar: 'مطر خفيف', en: 'Light Rain', fr: 'Pluie Légère', i: 'cloud-rain' },
-      63: { ar: 'مطر', en: 'Moderate Rain', fr: 'Pluie Modérée', i: 'cloud-rain' },
-      65: { ar: 'مطر غزير', en: 'Heavy Rain', fr: 'Forte Pluie', i: 'cloud-rain' },
-      71: { ar: 'ثلج خفيف', en: 'Light Snow', fr: 'Neige Légère', i: 'cloud-snow' },
-      95: { ar: 'عاصفة رعدية', en: 'Thunderstorm', fr: 'Orage', i: 'cloud-lightning' }
-    };
-
-    function wInfo(code) {
-      const defaultObj = { ar: 'أجواء متغيرة', en: 'Variable', fr: 'Variable', i: 'cloud' };
-      const item = WEATHER_CODES[code] || defaultObj;
-      return { t: item[currentLang] || item.ar, i: item.i };
-    }
-
-    function skyInfo(code, cloud, isDay) {
-      if (code > 3 || cloud == null) return wInfo(code);
-      if (cloud < 25) {
-        if (isDay) return { t: currentLang === 'ar' ? 'مشمس' : currentLang === 'fr' ? 'Ensoleillé' : 'Sunny', i: 'sun' };
-        return { t: currentLang === 'ar' ? 'صافي ليلاً' : currentLang === 'fr' ? 'Nuit Claire' : 'Clear Night', i: 'moon' };
-      }
-      if (cloud < 60) return { t: currentLang === 'ar' ? 'غائم جزئياً' : currentLang === 'fr' ? 'Partiellement Nuageux' : 'Partly Cloudy', i: isDay ? 'cloud-sun' : 'cloud-moon' };
-      return { t: currentLang === 'ar' ? 'غائم' : currentLang === 'fr' ? 'Nuageux' : 'Cloudy', i: 'cloud' };
-    }
-
-    let globalSunrise = null;
-    let globalSunset = null;
-    let notifiedSunriseToday = false;
-    let notifiedSunsetToday = false;
-
-    function applyDynamicTheme(temp, code, isDay, sunriseStr, sunsetStr) {
-      const container = document.getElementById('appContainer');
-      let appGradient = '';
-      let bodyColor = '';
-      let primaryCyan = '#00f2fe';
-
-      const now = new Date();
-      const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-      // حفظ أوقات الشروق والغروب للمراقبة الحية
-      if (sunriseStr) globalSunrise = sunriseStr.slice(0, 5);
-      if (sunsetStr) globalSunset = sunsetStr.slice(0, 5);
-
-      // فحص أوقات التنبيه اللحظي للشروق والغروب
-      checkSunAlerts(currentTimeStr);
-
-      const isSunsetTime = sunsetStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunsetStr.slice(0,2))) <= 1;
-      const isSunriseTime = sunriseStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunriseStr.slice(0,2))) <= 1;
-
-      if (code >= 51 && code <= 67) {
-        appGradient = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)';
-        bodyColor = '#090d16';
-        primaryCyan = '#38bdf8';
-      } else if (isSunsetTime || isSunriseTime) {
-        appGradient = 'linear-gradient(135deg, #3d220b 0%, #4a2e10 50%, #1f1105 100%)';
-        bodyColor = '#140b03';
-        primaryCyan = '#ffb703';
-      } else if (temp >= 30 && isDay) {
-        appGradient = 'linear-gradient(135deg, #3a1510 0%, #4d1d16 50%, #240a07 100%)';
-        bodyColor = '#1a0806';
-        primaryCyan = '#ff7830';
-      } else if (temp <= 15) {
-        appGradient = 'linear-gradient(135deg, #0c2340 0%, #1a3a5c 50%, #081726 100%)';
-        bodyColor = '#05101a';
-        primaryCyan = '#7dd3fc';
-      } else if (!isDay) {
-        appGradient = 'linear-gradient(135deg, #120d1d 0%, #1e172e 50%, #0a0712 100%)';
-        bodyColor = '#050308';
-        primaryCyan = '#c084fc';
-      } else {
-        appGradient = 'linear-gradient(135deg, #0a1f24 0%, #132e35 50%, #061317 100%)';
-        bodyColor = '#040d10';
-        primaryCyan = '#00f2fe';
-      }
-
-      container.style.background = appGradient;
-      document.body.style.background = bodyColor;
-      document.documentElement.style.setProperty('--primary-cyan', primaryCyan);
-    }
-
-    function checkSunAlerts(currentTimeStr) {
-      const t = translations[currentLang];
-      if (globalSunrise && currentTimeStr === globalSunrise && !notifiedSunriseToday) {
-        notifiedSunriseToday = true;
-        showBanner(t.sunriseAlertTitle, t.sunriseAlertMsg);
-        beep();
-      }
-      if (globalSunset && currentTimeStr === globalSunset && !notifiedSunsetToday) {
-        notifiedSunsetToday = true;
-        showBanner(t.sunsetAlertTitle, t.sunsetAlertMsg);
-        beep();
-      }
-    }
-
-    let tempChartInstance = null;
-    function renderTempChart(labels, temps) {
-      const ctx = document.getElementById('tempChart');
-      if (!ctx) return;
-      if (tempChartInstance) tempChartInstance.destroy();
-
-      const primaryCyan = getComputedStyle(document.documentElement).getPropertyValue('--primary-cyan').trim() || '#00f2fe';
-      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 180);
-      gradient.addColorStop(0, primaryCyan + '55');
-      gradient.addColorStop(1, primaryCyan + '00');
-
-      tempChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: '°C',
-            data: temps,
-            borderColor: primaryCyan,
-            borderWidth: 3,
-            pointBackgroundColor: '#ffffff',
-            pointBorderColor: primaryCyan,
-            pointRadius: 4,
-            fill: true,
-            backgroundColor: gradient,
-            tension: 0.4
-          }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(22, 27, 34, 0.85)' } },
-          scales: {
-            x: { grid: { display: false }, ticks: { color: '#a0aec0', font: { size: 10 } } },
-            y: { grid: { color: 'rgba(255, 255, 255, 0.08)' }, ticks: { color: '#a0aec0', font: { size: 10 } } }
-          }
+        y: {
+          grid: { color: 'rgba(255,255,255,.08)' },
+          ticks: { color: '#a0aec0' }
         }
+      }
+    }
+  });
+}
+
+/* =========================
+   6. خريطة الأمطار
+========================= */
+
+function initRadarMap(lat, lon) {
+  if (!window.L) return;
+
+  const container = document.getElementById('radarMap');
+  if (!container) return;
+
+  if (!radarMapInstance) {
+    radarMapInstance = L.map(container, {
+      zoomControl: true,
+      attributionControl: true
+    }).setView([lat, lon], 7);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(radarMapInstance);
+  } else {
+    radarMapInstance.setView([lat, lon], 7);
+  }
+
+  if (userMarker) userMarker.remove();
+
+  userMarker = L.marker([lat, lon])
+    .addTo(radarMapInstance)
+    .bindPopup(tr('locationLabel'));
+
+  loadRainLayer();
+
+  setTimeout(() => {
+    radarMapInstance?.invalidateSize();
+  }, 250);
+}
+
+async function loadRainLayer() {
+  if (!radarMapInstance) return;
+
+  const requestId = ++radarRequestId;
+
+  try {
+    const response = await fetch(
+      'https://api.rainviewer.com/public/weather-maps.json'
+    );
+
+    if (!response.ok) {
+      throw new Error(`Rain map HTTP ${response.status}`);
+    }
+
+    const info = await response.json();
+    if (requestId !== radarRequestId) return;
+
+    const frames = info?.radar?.past || [];
+    const frame = frames[frames.length - 1];
+
+    if (!frame?.path) {
+      throw new Error('No radar frame available');
+    }
+
+    const tileUrl =
+      `https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+
+    if (rainLayer) {
+      rainLayer.remove();
+    }
+
+    rainLayer = L.tileLayer(tileUrl, {
+      opacity: 0.65,
+      maxZoom: 12,
+      attribution: 'RainViewer'
+    });
+
+    rainLayer.on('tileerror', () => {
+      console.warn('Some precipitation tiles failed to load.');
+    });
+
+    rainLayer.addTo(radarMapInstance);
+  } catch (error) {
+    console.warn('Rain layer unavailable:', error);
+    showBanner(tr('radarTitle'), tr('mapError'));
+  }
+}
+
+/* =========================
+   7. التنبيهات من Supabase
+========================= */
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
+function renderAlerts() {
+  const container = document.getElementById('alertsListContainer');
+  if (!container) return;
+
+  if (latestAlerts === null) {
+    container.innerHTML = `
+      <div class="alert-card">
+        <div class="alert-header">${escapeHTML(tr('alertsError'))}</div>
+        <div class="alert-body">${escapeHTML(tr('alertsErrorDesc'))}</div>
+      </div>`;
+    return;
+  }
+
+  if (latestAlerts.length === 0) {
+    container.innerHTML = `
+      <div class="alert-card ok">
+        <div class="alert-header">
+          <i data-lucide="shield-check"></i>
+          <span>${escapeHTML(tr('noAlerts'))}</span>
+        </div>
+        <div class="alert-body">${escapeHTML(tr('noAlertsDesc'))}</div>
+      </div>`;
+  } else {
+    container.innerHTML = latestAlerts.map(alert => `
+      <div class="alert-card">
+        <div class="alert-header">
+          <i data-lucide="siren"></i>
+          <span>${escapeHTML(alert.title || 'Weather alert')}</span>
+        </div>
+        <div class="alert-body">${escapeHTML(alert.message || '')}</div>
+      </div>
+    `).join('');
+  }
+
+  lucide.createIcons();
+}
+
+async function fetchSupabaseAlerts() {
+  if (!supabaseClient) {
+    latestAlerts = null;
+    renderAlerts();
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('weather_alerts')
+      .select('title,message,is_active')
+      .eq('is_active', true);
+
+    if (error) throw error;
+
+    latestAlerts = Array.isArray(data) ? data : [];
+    renderAlerts();
+
+    if (latestAlerts.length > 0) {
+      const first = latestAlerts[0];
+      const signature = `${first.title || ''}|${first.message || ''}`;
+
+      document.getElementById('bellBtn').classList.add('has-alert');
+
+      // لا تكرر الصوت والبانر في كل تحديث دوري لنفس التنبيه.
+      if (signature !== lastAlertSignature) {
+        lastAlertSignature = signature;
+        showBanner(first.title || tr('alertsTitle'), first.message || '');
+        beep();
+      }
+    } else {
+      lastAlertSignature = '';
+      document.getElementById('bellBtn').classList.remove('has-alert');
+    }
+  } catch (error) {
+    console.error('Supabase alerts error:', error);
+    latestAlerts = null;
+    renderAlerts();
+  }
+}
+
+/* =========================
+   8. بانر وصوت التنبيه
+========================= */
+
+function showBanner(title, message) {
+  const banner = document.getElementById('alertBanner');
+
+  document.getElementById('abTitle').textContent = title || '';
+  document.getElementById('abMsg').textContent = message || '';
+
+  banner.classList.add('show');
+
+  clearTimeout(window._bannerTimer);
+  window._bannerTimer = setTimeout(hideBanner, 8000);
+
+  // إشعار محلي فقط إذا كان الإذن ممنوحًا مسبقًا.
+  // هذا لا ينشئ Push عند إغلاق الصفحة.
+  if ('Notification' in window &&
+      Notification.permission === 'granted') {
+    try {
+      new Notification(title || tr('alertsTitle'), {
+        body: message || ''
       });
+    } catch (error) {
+      console.warn('Local notification unavailable:', error);
+    }
+  }
+}
+
+function hideBanner() {
+  document.getElementById('alertBanner').classList.remove('show');
+}
+
+let lastBeepAt = 0;
+
+function beep() {
+  // تجنب تشغيل أصوات متكررة بفاصل قصير.
+  if (Date.now() - lastBeepAt < 3000) return;
+  lastBeepAt = Date.now();
+
+  try {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    const context = new AudioContextClass();
+
+    if (context.state === 'suspended') {
+      context.close();
+      return;
     }
 
-    let radarMapInstance = null;
-    function initRadarMap(lat, lon) {
-      const mapContainer = document.getElementById('radarMap');
-      if (!mapContainer) return;
+    [0, 0.35, 0.7].forEach(delay => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
 
-      if (radarMapInstance) {
-        radarMapInstance.remove();
-      }
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.08, context.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        context.currentTime + delay + 0.2
+      );
 
-      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(context.currentTime + delay);
+      oscillator.stop(context.currentTime + delay + 0.22);
+    });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-      }).addTo(radarMapInstance);
+    setTimeout(() => context.close().catch(() => {}), 1500);
+  } catch (error) {
+    console.warn('Audio unavailable:', error);
+  }
+}
 
-      L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
-        opacity: 0.65,
-        maxZoom: 19
-      }).addTo(radarMapInstance);
+/* =========================
+   9. الشروق والغروب
+========================= */
 
-      L.marker([lat, lon]).addTo(radarMapInstance);
+function getLocationLocalTime() {
+  // نحول الوقت الحالي إلى وقت الموقع باستخدام فرق UTC الذي رجع من API.
+  return new Date(Date.now() + globalUtcOffset * 1000);
+}
+
+function resetSunAlertsIfNewDay(dateKey) {
+  if (!dateKey || sunAlertDate === dateKey) return;
+
+  sunAlertDate = dateKey;
+  notifiedSunriseToday = false;
+  notifiedSunsetToday = false;
+}
+
+function checkSunAlerts() {
+  if (!globalSunrise && !globalSunset) return;
+
+  const localNow = getLocationLocalTime();
+  const hh = String(localNow.getUTCHours()).padStart(2, '0');
+  const mm = String(localNow.getUTCMinutes()).padStart(2, '0');
+  const currentMinutes = Number(hh) * 60 + Number(mm);
+
+  const dateKey = latestWeather?.data?.daily?.time?.[0] ||
+    `${localNow.getUTCFullYear()}-${localNow.getUTCMonth() + 1}-${localNow.getUTCDate()}`;
+
+  resetSunAlertsIfNewDay(dateKey);
+
+  function nearTarget(target) {
+    if (!target) return false;
+
+    const parts = target.split(':').map(Number);
+    if (parts.length !== 2 || parts.some(Number.isNaN)) return false;
+
+    const targetMinutes = parts[0] * 60 + parts[1];
+    const difference = currentMinutes - targetMinutes;
+
+    // نافذة قصيرة لتقليل احتمال تفويت التنبيه بسبب تأخر المؤقت.
+    return difference >= 0 && difference <= 2;
+  }
+
+  if (nearTarget(globalSunrise) && !notifiedSunriseToday) {
+    notifiedSunriseToday = true;
+    showBanner(tr('sunriseAlertTitle'), tr('sunriseAlertMsg'));
+  }
+
+  if (nearTarget(globalSunset) && !notifiedSunsetToday) {
+    notifiedSunsetToday = true;
+    showBanner(tr('sunsetAlertTitle'), tr('sunsetAlertMsg'));
+  }
+}
+
+/* =========================
+   10. ألوان الواجهة
+========================= */
+
+function applyDynamicTheme(temp, code, isDay) {
+  const container = document.getElementById('appContainer');
+
+  let gradient;
+  let bodyColor;
+  let accent = '#00f2fe';
+
+  if ([95, 96, 99].includes(code) || (code >= 51 && code <= 82)) {
+    gradient = 'linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)';
+    bodyColor = '#090d16';
+    accent = '#38bdf8';
+  } else if (temp >= 30 && isDay) {
+    gradient = 'linear-gradient(135deg,#3a1510 0%,#4d1d16 50%,#240a07 100%)';
+    bodyColor = '#1a0806';
+    accent = '#ff7830';
+  } else if (temp <= 15) {
+    gradient = 'linear-gradient(135deg,#0c2340 0%,#1a3a5c 50%,#081726 100%)';
+    bodyColor = '#05101a';
+    accent = '#7dd3fc';
+  } else if (!isDay) {
+    gradient = 'linear-gradient(135deg,#120d1d 0%,#1e172e 50%,#0a0712 100%)';
+    bodyColor = '#050308';
+    accent = '#c084fc';
+  } else {
+    gradient = 'linear-gradient(135deg,#0a1f24 0%,#132e35 50%,#061317 100%)';
+    bodyColor = '#040d10';
+  }
+
+  container.style.background = gradient;
+  document.body.style.background = bodyColor;
+  document.documentElement.style.setProperty('--primary-cyan', accent);
+}
+
+/* =========================
+   11. التنقل بين الصفحات
+========================= */
+
+function switchPage(pageId, btnElement) {
+  document.querySelectorAll('.page-section').forEach(section => {
+    section.classList.remove('active');
+  });
+
+  document.querySelectorAll('.nav-item').forEach(nav => {
+    nav.classList.remove('active');
+  });
+
+  const page = document.getElementById(`page-${pageId}`);
+  if (!page) return;
+
+  page.classList.add('active');
+
+  const radarBtn = document.getElementById('radarBtn');
+  radarBtn.style.borderColor = 'var(--glass-border)';
+
+  if (pageId === 'radar') {
+    radarBtn.style.borderColor = 'var(--primary-cyan)';
+
+    setTimeout(() => {
+      radarMapInstance?.invalidateSize();
+    }, 200);
+  } else if (btnElement?.classList.contains('nav-item')) {
+    btnElement.classList.add('active');
+  }
+}
+
+/* =========================
+   12. بدء التطبيق والتحديث
+========================= */
+
+document.getElementById('appTitle').textContent = tr('appTitle');
+document.getElementById('langBtn').textContent = 'EN';
+
+lucide.createIcons();
+initApp();
+
+// تحديث بيانات الطقس والتنبيهات كل 10 دقائق أثناء فتح الصفحة.
+if (refreshTimer) clearInterval(refreshTimer);
+
+refreshTimer = setInterval(() => {
+  if (document.visibilityState === 'visible') {
+    if (latestWeather) {
+      fetchWeatherData(
+        latestWeather.lat,
+        latestWeather.lon,
+        latestWeather.locationLabel
+      );
     }
 
-    function escapeHTML(s) {
-      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-    }
+    fetchSupabaseAlerts();
+  }
+}, 10 * 60 * 1000);
 
-    function switchPage(pageId, btnElement) {
-      document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-      
-      document.getElementById('radarBtn').style.borderColor = 'var(--glass-border)';
+// فحص الشروق والغروب مرة كل 15 ثانية، مع منع تكرار تنبيه اليوم.
+setInterval(checkSunAlerts, 15000);
 
-      if (pageId === 'radar') {
-        document.getElementById('page-radar').classList.add('active');
-        btnElement.style.borderColor = 'var(--primary-cyan)';
-        setTimeout(() => {
-          if (radarMapInstance) radarMapInstance.invalidateSize();
-        }, 200);
-      } else {
-        document.getElementById('page-' + pageId).classList.add('active');
-        if (btnElement.classList.contains('nav-item')) {
-          btnElement.classList.add('active');
-        }
-      }
-    }
-
-    function initApp() {
-      const btn = document.getElementById('refreshBtn');
-      btn.classList.add('spin');
-      document.getElementById('weatherState').innerText = translations[currentLang].loading;
-
-      const done = () => setTimeout(() => btn.classList.remove('spin'), 600);
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            await fetchWeatherData(lat, lon, `${lat.toFixed(2)}°، ${lon.toFixed(2)}°`);
-            done();
-          },
-          async () => {
-            await fetchWeatherData(43.7102, 7.2620, 'Nice, France');
-            done();
-          },
-          { timeout: 7000, enableHighAccuracy: false }
-        );
-      } else {
-        fetchWeatherData(43.7102, 7.2620, 'Nice, France').then(done);
-      }
-      fetchSupabaseAlerts();
-    }
-
-    async function fetchWeatherData(lat, lon, locationLabel) {
-      try {
-        document.getElementById('cityName').innerText = locationLabel;
-
-        const url = 'https://api.open-meteo.com/v1/forecast'
-          + `?latitude=${lat}&longitude=${lon}`
-          + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,cloud_cover,is_day'
-          + '&hourly=temperature_2m,weather_code'
-          + '&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset'
-          + '&timezone=auto';
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (!data.current) throw new Error('No current data');
-
-        const temp = Math.round(data.current.temperature_2m);
-        const wind = data.current.wind_speed_10m;
-        const hum = data.current.relative_humidity_2m;
-        const code = data.current.weather_code;
-        const isDay = data.current.is_day;
-        
-        const todaySunrise = data.daily?.sunrise?.[0] ? data.daily.sunrise[0].slice(11, 16) : null;
-        const todaySunset = data.daily?.sunset?.[0] ? data.daily.sunset[0].slice(11, 16) : null;
-
-        applyDynamicTheme(temp, code, isDay, todaySunrise, todaySunset);
-        initRadarMap(lat, lon);
-        
-        const info = skyInfo(code, data.current.cloud_cover, isDay);
-
-        document.getElementById('tempDegree').innerText = temp + '°';
-        document.getElementById('windSpeed').innerText = wind + (currentLang === 'ar' ? ' كم/س' : ' km/h');
-        document.getElementById('humidity').innerText = hum + '%';
-        document.getElementById('weatherState').innerText = info.t;
-        document.getElementById('windDir').innerText = info.t;
-        document.getElementById('weatherIcon').innerHTML =
-          `<i data-lucide="${info.i}" style="width:65px;height:65px;color: var(--primary-cyan);"></i>`;
-
-        let tip = currentLang === 'ar' ? `الطقس الحالي بمعدل ${temp}°م. ` : currentLang === 'fr' ? `Température actuelle de ${temp}°C. ` : `Current temperature is ${temp}°C. `;
-        if (temp >= 30) tip += currentLang === 'ar' ? 'الجو حار، اشرب ماء بكثرة.' : currentLang === 'fr' ? 'Il fait chaud, buvez beaucoup d\'eau.' : 'It is hot, drink plenty of water.';
-        else if (temp <= 15) tip += currentLang === 'ar' ? 'الجو بارد، ارتدِ ملابس ثقيلة.' : currentLang === 'fr' ? 'Il fait froid, habillez-vous chaudement.' : 'It is cold, wear warm clothes.';
-        else tip += currentLang === 'ar' ? 'أجواء معتدلة، استمتع بيومك!' : currentLang === 'fr' ? 'Météo agréable, profitez de votre journée!' : 'Mild weather, enjoy your day!';
-        document.getElementById('aiAdvice').innerText = tip;
-
-        const hourlyContainer = document.getElementById('hourlyContainer');
-        hourlyContainer.innerHTML = '';
-        const nowKey = (data.current.time || '').slice(0, 13);
-        let start = data.hourly.time.findIndex(t => t.startsWith(nowKey));
-        if (start < 0) start = 0;
-
-        const chartLabels = [];
-        const chartTemps = [];
-
-        for (let i = start; i < Math.min(start + 24, data.hourly.time.length); i++) {
-          const t = Math.round(data.hourly.temperature_2m[i]);
-          const hh = data.hourly.time[i].slice(11, 16);
-          const hi = wInfo(data.hourly.weather_code[i]);
-
-          chartLabels.push(hh);
-          chartTemps.push(t);
-
-          hourlyContainer.innerHTML += `
-            <div class="hour-card">
-              <span class="hour-time">${hh}</span>
-              <i data-lucide="${hi.i}" style="width:20px;height:20px;color: var(--primary-cyan);"></i>
-              <span class="hour-temp">${t}°</span>
-            </div>`;
-        }
-
-        renderTempChart(chartLabels, chartTemps);
-
-        const dailyContainer = document.getElementById('dailyContainer');
-        dailyContainer.innerHTML = '';
-        for (let i = 0; i < data.daily.time.length; i++) {
-          const dayName = new Date(data.daily.time[i] + 'T12:00:00').toLocaleDateString(currentLang, { weekday: 'long' });
-          const maxT = Math.round(data.daily.temperature_2m_max[i]);
-          const minT = Math.round(data.daily.temperature_2m_min[i]);
-          const di = wInfo(data.daily.weather_code[i]);
-          dailyContainer.innerHTML += `
-            <div class="day-row">
-              <span class="day-name">${dayName}</span>
-              <i data-lucide="${di.i}" style="width:20px;height:20px;color: var(--primary-cyan);"></i>
-              <span class="day-temp">${maxT}° / ${minT}°</span>
-            </div>`;
-        }
-
-        lucide.createIcons();
-      } catch (err) {
-        console.error('خطأ في الطقس:', err);
-        document.getElementById('weatherState').innerText = translations[currentLang].noAlerts;
-      }
-    }
-
-    function beep() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        [0, 0.35, 0.7].forEach(t => {
-          const o = ctx.createOscillator(), g = ctx.createGain();
-          o.type = 'square'; o.frequency.value = 880;
-          g.gain.value = 0.15;
-          o.connect(g); g.connect(ctx.destination);
-          o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.25);
-        });
-      } catch (e) { console.warn('Audio failed', e); }
-    }
-
-    function showBanner(title, msg) {
-      document.getElementById('abTitle').innerText = title;
-      document.getElementById('abMsg').innerText = msg;
-      document.getElementById('alertBanner').classList.add('show');
-      clearTimeout(window._bannerTimer);
-      window._bannerTimer = setTimeout(hideBanner, 8000);
-    }
-    function hideBanner() { document.getElementById('alertBanner').classList.remove('show'); }
-
-    async function fetchSupabaseAlerts() {
-      const container = document.getElementById('alertsListContainer');
-      const t = translations[currentLang];
-      const emptyHTML = `
-        <div class="alert-card ok">
-          <div class="alert-header"><i data-lucide="shield-check"></i><span>${t.noAlerts}</span></div>
-          <div class="alert-body">${t.noAlertsDesc}</div>
-        </div>`;
-
-      if (!supabaseClient) { container.innerHTML = emptyHTML; lucide.createIcons(); return; }
-      try {
-        const { data, error } = await supabaseClient
-          .from('weather_alerts')
-          .select('*')
-          .eq('is_active', true);
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          container.innerHTML = data.map(a => `
-            <div class="alert-card">
-              <div class="alert-header"><i data-lucide="siren"></i><span>${escapeHTML(a.title)}</span></div>
-              <div class="alert-body">${escapeHTML(a.message)}</div>
-            </div>`).join('');
-          
-          showBanner(data[0].title, data[0].message);
-          document.getElementById('bellBtn').classList.add('has-alert');
-          beep();
-        } else {
-          container.innerHTML = emptyHTML;
-        }
-        lucide.createIcons();
-      } catch (err) {
-        console.log('خطأ Supabase:', err);
-        container.innerHTML = emptyHTML;
-        lucide.createIcons();
-      }
-    }
-
-    lucide.createIcons();
-    initApp();
-
-    // فحص دوري كل دقيقة للتحقق من أوقات الشروق والغروب
-    setInterval(() => {
-      const now = new Date();
-      const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      checkSunAlerts(currentTimeStr);
-    }, 60000);
-  </script>
-</body>
-</html>
+// تحديث أحجام الخريطة عند الرجوع إلى الصفحة.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    radarMapInstance?.invalidateSize();
+    checkSunAlerts();
+  }
+});
+        </script>
