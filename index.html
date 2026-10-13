@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
   
-  <!-- مكتبات الأيقونات، Supabase، Chart.js، وخريطة Leaflet للرادار -->
   <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -40,7 +39,7 @@
     .location-box { display: flex; align-items: center; gap: 8px; }
     .location-title { font-size: 1.05rem; font-weight: 700; }
     .header-actions { display: flex; gap: 8px; }
-    .icon-btn { background: rgba(255,255,255,.08); border: 1px solid var(--glass-border); color: #fff; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
+    .icon-btn { background: rgba(255,255,255,.08); border: 1px solid var(--glass-border); color: #fff; height: 40px; padding: 0 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
     .icon-btn.spin svg { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .page-section { display: none; flex-direction: column; gap: 16px; animation: fadeIn .3s ease-in-out; }
@@ -65,9 +64,8 @@
     .day-name { font-weight: 700; font-size: .95rem; }
     .day-temp { font-weight: 700; color: var(--primary-cyan); direction: ltr; }
     
-    /* تصميم خريطة الرادار الإخبارية */
-    #radarMap { width: 100%; height: 240px; border-radius: 18px; border: 1px solid var(--glass-border); z-index: 1; }
-    .leaflet-container { background: #0d1117 !important; font-family: 'Tajawal', sans-serif !important; }
+    #radarMap { width: 100%; height: 350px; border-radius: 18px; border: 1px solid var(--glass-border); z-index: 1; }
+    .leaflet-container { background: #080a0f !important; font-family: 'Tajawal', sans-serif !important; border-radius: 18px; }
 
     .guide-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .guide-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; backdrop-filter: blur(10px); }
@@ -113,6 +111,7 @@
           <span class="location-title" id="cityName">جاري تحديد الموقع...</span>
         </div>
         <div class="header-actions">
+          <button class="icon-btn" id="radarBtn" onclick="switchPage('radar', this)" data-i18n="radarBtnText">🛰️ رادار</button>
           <button class="icon-btn" id="langBtn" onclick="toggleLanguage()">FR</button>
           <button class="icon-btn" id="refreshBtn" onclick="initApp()">
             <i data-lucide="rotate-cw" style="width:18px;height:18px;"></i>
@@ -161,20 +160,23 @@
         </div>
       </div>
 
-      <!-- الساعات مع الرسم البياني وخريطة الرادار الإخبارية -->
+      <!-- الساعات مع الرسم البياني فقط -->
       <div id="page-hourly" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="hourlyTitle">توقعات الساعات القادمة</h3>
         <div class="hourly-scroll" id="hourlyContainer"></div>
 
         <div class="main-weather-card" style="margin-top: 10px; padding: 16px;">
           <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="chartTitle">📈 منحنى تغير درجات الحرارة</h4>
-          <div style="position: relative; width: 100%; height: 180px;">
+          <div style="position: relative; width: 100%; height: 220px;">
             <canvas id="tempChart"></canvas>
           </div>
         </div>
+      </div>
 
-        <div class="main-weather-card" style="margin-top: 5px; padding: 16px;">
-          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="radarTitle">🛰️ رادار العواصف والأمطار الحي</h4>
+      <!-- صفحة خريطة الرادار المستقلة -->
+      <div id="page-radar" class="page-section">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="radarTitle">🛰️ رادار العواصف والأمطار الحي</h3>
+        <div class="main-weather-card" style="padding: 12px;">
           <div id="radarMap"></div>
         </div>
       </div>
@@ -259,6 +261,7 @@
         hourlyTitle: "توقعات الساعات القادمة",
         chartTitle: "📈 منحنى تغير درجات الحرارة",
         radarTitle: "🛰️ رادار العواصف والأمطار الحي",
+        radarBtnText: "🛰️ رادار",
         dailyTitle: "توقعات الأسبوع",
         alertsTitle: "لوحة الإنذارات النشطة",
         guideTitle: "📖 دليل استخدام التطبيق",
@@ -285,6 +288,7 @@
         hourlyTitle: "Hourly Forecast",
         chartTitle: "📈 Temperature Trend Graph",
         radarTitle: "🛰️ Live Storm & Rain Radar",
+        radarBtnText: "🛰️ Radar",
         dailyTitle: "Weekly Forecast",
         alertsTitle: "Active Alerts Dashboard",
         guideTitle: "📖 App User Guide",
@@ -311,6 +315,7 @@
         hourlyTitle: "Prévisions Horaires",
         chartTitle: "📈 Graphique de Température",
         radarTitle: "🛰️ Radar Tempête & Pluie en Direct",
+        radarBtnText: "🛰️ Radar",
         dailyTitle: "Prévisions Semainières",
         alertsTitle: "Tableau des Alertes Actives",
         guideTitle: "📖 Guide d'Utilisation",
@@ -443,7 +448,7 @@
       if (tempChartInstance) tempChartInstance.destroy();
 
       const primaryCyan = getComputedStyle(document.documentElement).getPropertyValue('--primary-cyan').trim() || '#00f2fe';
-      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 160);
+      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 180);
       gradient.addColorStop(0, primaryCyan + '55');
       gradient.addColorStop(1, primaryCyan + '00');
 
@@ -458,7 +463,7 @@
             borderWidth: 3,
             pointBackgroundColor: '#ffffff',
             pointBorderColor: primaryCyan,
-            pointRadius: 3,
+            pointRadius: 4,
             fill: true,
             backgroundColor: gradient,
             tension: 0.4
@@ -469,8 +474,8 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(22, 27, 34, 0.85)' } },
           scales: {
-            x: { grid: { display: false }, ticks: { color: '#a0aec0', font: { size: 9 } } },
-            y: { grid: { color: 'rgba(255, 255, 255, 0.08)' }, ticks: { color: '#a0aec0', font: { size: 9 } } }
+            x: { grid: { display: false }, ticks: { color: '#a0aec0', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255, 255, 255, 0.08)' }, ticks: { color: '#a0aec0', font: { size: 10 } } }
           }
         }
       });
@@ -487,11 +492,12 @@
 
       radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      // خريطة مجانية 100% بدون أي مفاتيح API وبألوان داكنة تتناسب مع التصميم
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
       }).addTo(radarMapInstance);
 
-      // طبقة رادار الطقس الحية الإخبارية
+      // طبقة رادار الطقس الحية المجانية
       L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
         opacity: 0.65,
         maxZoom: 19
@@ -507,10 +513,21 @@
     function switchPage(pageId, btnElement) {
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-      document.getElementById('page-' + pageId).classList.add('active');
-      btnElement.classList.add('active');
-      if (pageId === 'hourly' && radarMapInstance) {
-        setTimeout(() => radarMapInstance.invalidateSize(), 200);
+      
+      // إزالة التحديد عن الأزرار العلوية إن وجدت
+      document.getElementById('radarBtn').style.borderColor = 'var(--glass-border)';
+
+      if (pageId === 'radar') {
+        document.getElementById('page-radar').classList.add('active');
+        btnElement.style.borderColor = 'var(--primary-cyan)';
+        setTimeout(() => {
+          if (radarMapInstance) radarMapInstance.invalidateSize();
+        }, 200);
+      } else {
+        document.getElementById('page-' + pageId).classList.add('active');
+        if (btnElement.classList.contains('nav-item')) {
+          btnElement.classList.add('active');
+        }
       }
     }
 
