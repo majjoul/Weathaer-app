@@ -68,6 +68,7 @@
     .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-size: .7rem; font-weight: 600; transition: all .2s ease; }
     .nav-item.active { color: var(--primary-cyan); }
 
+    /* بانر الإنذار العاجل */
     .alert-banner { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 50; background: linear-gradient(135deg, #ff3366, #b3123a); border-radius: 18px; padding: 14px 16px; box-shadow: 0 10px 30px var(--danger-glow); transform: translateY(-140%); transition: transform .4s ease; cursor: pointer; }
     .alert-banner.show { transform: translateY(0); animation: shake .5s ease 2; }
     .alert-banner .ab-title { font-weight: 900; font-size: 1rem; margin-bottom: 4px; }
@@ -191,16 +192,15 @@
       console.error('Supabase Init Error:', e);
     }
 
-    // تسجيل الـ Service Worker وتفعيل اشتراك Push Notifications
+    // تسجيل الـ Service Worker وتفعيل إذن الإشعارات تلقائياً
     async function registerServiceWorkerAndPush() {
       if ('serviceWorker' in navigator && 'PushManager' in window) {
         try {
           const registration = await navigator.serviceWorker.register('sw.js');
           console.log('تم تسجيل الـ Service Worker بنجاح:', registration);
           
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
-            console.log('تم السماح بالإشعارات بنجاح.');
+          if (Notification.permission === 'default') {
+            await Notification.requestPermission();
           }
         } catch (e) {
           console.warn('فشل تسجيل الـ Service Worker:', e);
@@ -209,6 +209,7 @@
     }
     registerServiceWorkerAndPush();
 
+    // ===== أكواد حالة الطقس (WMO) =====
     const WEATHER_CODES = {
       0:  { t: 'صافي',             i: 'sun' },
       1:  { t: 'غالباً صافي',       i: 'sun' },
@@ -243,6 +244,7 @@
       return WEATHER_CODES[code] || { t: 'غير معروف', i: 'cloud' };
     }
 
+    // الحالة الحالية حسب نسبة الغيوم الفعلية + نهار/ليل
     function skyInfo(code, cloud, isDay) {
       if (code > 3 || cloud == null) return wInfo(code);
       if (cloud < 25) return { t: isDay ? 'مشمس' : 'صافي', i: isDay ? 'sun' : 'moon' };
@@ -277,6 +279,7 @@
             done();
           },
           async () => {
+            console.warn('Geolocation denied or failed, using default.');
             await fetchWeatherData(43.7102, 7.2620, 'Nice, France');
             done();
           },
@@ -317,6 +320,7 @@
         document.getElementById('weatherIcon').innerHTML =
           `<i data-lucide="${info.i}" style="width:65px;height:65px;color: var(--primary-cyan);"></i>`;
 
+        // نصيحة المساعد
         let tip = `الطقس الآن ${info.t} ودرجة الحرارة ${temp}°م. `;
         if (temp >= 35) tip += 'الجو حار، اشرب ماء كثير وتجنب الشمس وقت الظهيرة.';
         else if (temp <= 10) tip += 'الجو بارد، البس ملابس ثقيلة.';
@@ -324,9 +328,10 @@
         if (data.current.weather_code >= 51 && data.current.weather_code <= 99) tip += ' ☔ خذ معك مظلة.';
         document.getElementById('aiAdvice').innerText = tip;
 
+        // الساعات: نبدأ من الساعة الحالية حسب توقيت الموقع
         const hourlyContainer = document.getElementById('hourlyContainer');
         hourlyContainer.innerHTML = '';
-        const nowKey = (data.current.time || '').slice(0, 13);
+        const nowKey = (data.current.time || '').slice(0, 13); // yyyy-mm-ddThh
         let start = data.hourly.time.findIndex(t => t.startsWith(nowKey));
         if (start < 0) start = 0;
         for (let i = start; i < Math.min(start + 24, data.hourly.time.length); i++) {
@@ -341,6 +346,7 @@
             </div>`;
         }
 
+        // الأيام
         const dailyContainer = document.getElementById('dailyContainer');
         dailyContainer.innerHTML = '';
         for (let i = 0; i < data.daily.time.length; i++) {
@@ -364,25 +370,36 @@
       }
     }
 
+    // ===== نظام الإنذارات والتنبيهات =====
     let supabaseAlerts = [];
     let localAlerts = [];
 
     function renderAlerts() {
       const container = document.getElementById('alertsListContainer');
       const all = [...localAlerts, ...supabaseAlerts];
+      
+      let htmlContent = '';
       if (all.length === 0) {
-        container.innerHTML = `
+        htmlContent = `
           <div class="alert-card ok">
             <div class="alert-header"><i data-lucide="shield-check"></i><span>لا توجد تحذيرات حالية</span></div>
             <div class="alert-body">النظام يعمل بشكل سليم.</div>
           </div>`;
       } else {
-        container.innerHTML = all.map(a => `
+        htmlContent = all.map(a => `
           <div class="alert-card">
             <div class="alert-header"><i data-lucide="siren"></i><span>${escapeHTML(a.title)}</span></div>
             <div class="alert-body">${escapeHTML(a.message)}</div>
           </div>`).join('');
       }
+
+      // الحفاظ على أزرار الاختبار دائماً في أسفل القائمة
+      htmlContent += `
+        <button class="test-btn" onclick="simulateEarthquake()">🧪 اختبار: محاكاة زلزال بقوة 8.0</button>
+        <button class="test-btn clear" onclick="clearTestAlerts()">مسح إنذارات الاختبار</button>
+      `;
+
+      container.innerHTML = htmlContent;
       lucide.createIcons();
     }
 
