@@ -76,8 +76,6 @@
     @keyframes shake { 0%,100% { margin-left: 0; } 25% { margin-left: -6px; } 75% { margin-left: 6px; } }
     .bell-badge { position: relative; }
     .bell-badge.has-alert::after { content: ''; position: absolute; top: -2px; right: 8px; width: 9px; height: 9px; background: var(--danger-red); border-radius: 50%; box-shadow: 0 0 8px var(--danger-red); }
-    .test-btn { background: rgba(255,183,3,.12); border: 1px dashed var(--warning-amber); color: var(--warning-amber); border-radius: 14px; padding: 12px; font-weight: 700; font-size: .9rem; cursor: pointer; width: 100%; margin-top: 5px; }
-    .test-btn.clear { background: rgba(255,255,255,.06); border-color: var(--glass-border); color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -159,8 +157,6 @@
       <div id="page-alerts" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">لوحة الإنذارات النشطة</h3>
         <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
-        <button class="test-btn" onclick="simulateEarthquake()">🧪 اختبار: محاكاة زلزال بقوة 8.0</button>
-        <button class="test-btn clear" onclick="clearTestAlerts()">مسح إنذارات الاختبار</button>
       </div>
 
     </div>
@@ -192,7 +188,7 @@
       console.error('Supabase Init Error:', e);
     }
 
-    // تسجيل الـ Service Worker وتفعيل إذن الإشعارات تلقائياً
+    // تسجيل الـ Service Worker وتفعيل إذن الإشعارات
     async function registerServiceWorkerAndPush() {
       if ('serviceWorker' in navigator && 'PushManager' in window) {
         try {
@@ -209,7 +205,6 @@
     }
     registerServiceWorkerAndPush();
 
-    // ===== أكواد حالة الطقس (WMO) =====
     const WEATHER_CODES = {
       0:  { t: 'صافي',             i: 'sun' },
       1:  { t: 'غالباً صافي',       i: 'sun' },
@@ -244,7 +239,6 @@
       return WEATHER_CODES[code] || { t: 'غير معروف', i: 'cloud' };
     }
 
-    // الحالة الحالية حسب نسبة الغيوم الفعلية + نهار/ليل
     function skyInfo(code, cloud, isDay) {
       if (code > 3 || cloud == null) return wInfo(code);
       if (cloud < 25) return { t: isDay ? 'مشمس' : 'صافي', i: isDay ? 'sun' : 'moon' };
@@ -279,7 +273,6 @@
             done();
           },
           async () => {
-            console.warn('Geolocation denied or failed, using default.');
             await fetchWeatherData(43.7102, 7.2620, 'Nice, France');
             done();
           },
@@ -320,7 +313,6 @@
         document.getElementById('weatherIcon').innerHTML =
           `<i data-lucide="${info.i}" style="width:65px;height:65px;color: var(--primary-cyan);"></i>`;
 
-        // نصيحة المساعد
         let tip = `الطقس الآن ${info.t} ودرجة الحرارة ${temp}°م. `;
         if (temp >= 35) tip += 'الجو حار، اشرب ماء كثير وتجنب الشمس وقت الظهيرة.';
         else if (temp <= 10) tip += 'الجو بارد، البس ملابس ثقيلة.';
@@ -328,10 +320,9 @@
         if (data.current.weather_code >= 51 && data.current.weather_code <= 99) tip += ' ☔ خذ معك مظلة.';
         document.getElementById('aiAdvice').innerText = tip;
 
-        // الساعات: نبدأ من الساعة الحالية حسب توقيت الموقع
         const hourlyContainer = document.getElementById('hourlyContainer');
         hourlyContainer.innerHTML = '';
-        const nowKey = (data.current.time || '').slice(0, 13); // yyyy-mm-ddThh
+        const nowKey = (data.current.time || '').slice(0, 13);
         let start = data.hourly.time.findIndex(t => t.startsWith(nowKey));
         if (start < 0) start = 0;
         for (let i = start; i < Math.min(start + 24, data.hourly.time.length); i++) {
@@ -346,7 +337,6 @@
             </div>`;
         }
 
-        // الأيام
         const dailyContainer = document.getElementById('dailyContainer');
         dailyContainer.innerHTML = '';
         for (let i = 0; i < data.daily.time.length; i++) {
@@ -368,39 +358,6 @@
         document.getElementById('weatherState').innerText = 'تعذر جلب البيانات';
         document.getElementById('aiAdvice').innerText = 'تحقق من الاتصال بالإنترنت ثم اضغط على زر التحديث.';
       }
-    }
-
-    // ===== نظام الإنذارات والتنبيهات =====
-    let supabaseAlerts = [];
-    let localAlerts = [];
-
-    function renderAlerts() {
-      const container = document.getElementById('alertsListContainer');
-      const all = [...localAlerts, ...supabaseAlerts];
-      
-      let htmlContent = '';
-      if (all.length === 0) {
-        htmlContent = `
-          <div class="alert-card ok">
-            <div class="alert-header"><i data-lucide="shield-check"></i><span>لا توجد تحذيرات حالية</span></div>
-            <div class="alert-body">النظام يعمل بشكل سليم.</div>
-          </div>`;
-      } else {
-        htmlContent = all.map(a => `
-          <div class="alert-card">
-            <div class="alert-header"><i data-lucide="siren"></i><span>${escapeHTML(a.title)}</span></div>
-            <div class="alert-body">${escapeHTML(a.message)}</div>
-          </div>`).join('');
-      }
-
-      // الحفاظ على أزرار الاختبار دائماً في أسفل القائمة
-      htmlContent += `
-        <button class="test-btn" onclick="simulateEarthquake()">🧪 اختبار: محاكاة زلزال بقوة 8.0</button>
-        <button class="test-btn clear" onclick="clearTestAlerts()">مسح إنذارات الاختبار</button>
-      `;
-
-      container.innerHTML = htmlContent;
-      lucide.createIcons();
     }
 
     function beep() {
@@ -425,55 +382,43 @@
     }
     function hideBanner() { document.getElementById('alertBanner').classList.remove('show'); }
 
-    function triggerAlert(title, message, isTest) {
-      if (isTest) localAlerts.unshift({ title, message });
-      renderAlerts();
-      showBanner(title, message);
-      document.getElementById('bellBtn').classList.add('has-alert');
-      beep();
-      if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
-      if ('Notification' in window && Notification.permission === 'granted') {
-        const opts = { body: message, dir: 'rtl', lang: 'ar', vibrate: [400, 150, 400, 150, 400], requireInteraction: true };
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.ready
-            .then(reg => reg.showNotification(title, opts))
-            .catch(e => console.warn('SW notification failed', e));
-        } else {
-          try { new Notification(title, opts); } catch (e) { console.warn(e); }
-        }
-      }
-    }
-
-    async function simulateEarthquake() {
-      if ('Notification' in window && Notification.permission === 'default') {
-        try { await Notification.requestPermission(); } catch (e) {}
-      }
-      triggerAlert('🚨 زلزال قوي بقوة 8.0',
-        'تم رصد زلزال بقوة 8.0 على مقياس ريختر. ابتعد عن المباني والزجاج، واحتمِ تحت طاولة متينة، ولا تستخدم المصعد.',
-        true);
-    }
-
-    function clearTestAlerts() {
-      localAlerts = [];
-      document.getElementById('bellBtn').classList.remove('has-alert');
-      hideBanner();
-      renderAlerts();
-    }
-
+    // جلب الإنذارات الحقيقية من Supabase وعرضها تلقائياً
     async function fetchSupabaseAlerts() {
-      if (!supabaseClient) { renderAlerts(); return; }
+      const container = document.getElementById('alertsListContainer');
+      const emptyHTML = `
+        <div class="alert-card ok">
+          <div class="alert-header"><i data-lucide="shield-check"></i><span>لا توجد تحذيرات حالية</span></div>
+          <div class="alert-body">النظام يعمل بشكل سليم.</div>
+        </div>`;
+
+      if (!supabaseClient) { container.innerHTML = emptyHTML; lucide.createIcons(); return; }
       try {
         const { data, error } = await supabaseClient
           .from('weather_alerts')
           .select('*')
           .eq('is_active', true);
         if (error) throw error;
-        supabaseAlerts = data || [];
+
+        if (data && data.length > 0) {
+          container.innerHTML = data.map(a => `
+            <div class="alert-card">
+              <div class="alert-header"><i data-lucide="siren"></i><span>${escapeHTML(a.title)}</span></div>
+              <div class="alert-body">${escapeHTML(a.message)}</div>
+            </div>`).join('');
+          
+          // تشغيل تنبيه بصري وصوتي عند وجود تنذير نشط من قاعدة البيانات
+          showBanner(data[0].title, data[0].message);
+          document.getElementById('bellBtn').classList.add('has-alert');
+          beep();
+        } else {
+          container.innerHTML = emptyHTML;
+        }
+        lucide.createIcons();
       } catch (err) {
         console.log('خطأ Supabase:', err);
-        supabaseAlerts = [];
+        container.innerHTML = emptyHTML;
+        lucide.createIcons();
       }
-      renderAlerts();
     }
 
     lucide.createIcons();
