@@ -35,6 +35,11 @@
     
     body.desktop-mode .app-container { max-width: 900px; height: 85vh; border-radius: 28px; padding: 25px 30px 80px 30px; }
 
+    /* جعل الخريطة الأساسية متناسقة وداكنة بأمان تام */
+    .map-tiles {
+      filter: brightness(0.75) contrast(110%);
+    }
+
     .glow-sphere-1 { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,242,254,.3) 0%, transparent 70%); z-index: 0; pointer-events: none; }
     .glow-sphere-2 { position: absolute; bottom: 100px; left: -80px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,51,102,.25) 0%, transparent 70%); z-index: 0; pointer-events: none; }
     .content-wrapper { position: relative; z-index: 1; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
@@ -77,12 +82,6 @@
     .sun-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); }
     .sun-arc-wrap { position: relative; height: 90px; width: 100%; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
     .sun-svg { width: 100%; height: 75px; overflow: visible; }
-
-    .guide-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .guide-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; backdrop-filter: blur(10px); }
-    .guide-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(0,242,254,0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-cyan); flex-shrink: 0; }
-    .guide-content h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
-    .guide-content p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
 
     .alert-card { background: linear-gradient(135deg, rgba(255,51,102,.2) 0%, rgba(20,10,20,.6) 100%); border: 1px solid var(--danger-red); border-radius: 20px; padding: 16px; box-shadow: 0 10px 25px var(--danger-glow); }
     .alert-card.ok { background: linear-gradient(135deg, rgba(0,242,254,.12) 0%, rgba(20,10,20,.6) 100%); border-color: rgba(0,242,254,.4); box-shadow: none; }
@@ -575,13 +574,13 @@
 
       radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
 
-      // استخدام خريطة داكنة أصلية (CartoDB Dark Matter) لكي تظهر طبقة المطر بألوانها الحقيقية والواضحة
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      // خريطة أساسية مجانية وموثوقة مع فئة مخصصة لتغميق الخلفية بأمان
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd'
+        className: 'map-tiles'
       }).addTo(radarMapInstance);
 
-      // طبقة رادار الأمطار السحابية الملونة والواضحة
+      // طبقة الأمطار والسحب الحية بألوانها الأصلية الزاهية (أزرق، أخضر، أصفر)
       L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
         opacity: 0.85,
         maxZoom: 19
@@ -804,10 +803,6 @@
           .select('*')
           .eq('is_active', true);
         if (error) throw error;
-
-        if (data && data.lengthY > 0) { // wait data.length > 0
-          // fixed below
-        }
 
         if (data && data.length > 0) {
           container.innerHTML = data.map(a => `
