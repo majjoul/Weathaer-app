@@ -9,9 +9,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
   
+  <!-- مكتبات الأيقونات، Supabase، Chart.js، وخريطة Leaflet للرادار -->
   <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     :root {
@@ -62,6 +65,10 @@
     .day-name { font-weight: 700; font-size: .95rem; }
     .day-temp { font-weight: 700; color: var(--primary-cyan); direction: ltr; }
     
+    /* تصميم خريطة الرادار الإخبارية */
+    #radarMap { width: 100%; height: 240px; border-radius: 18px; border: 1px solid var(--glass-border); z-index: 1; }
+    .leaflet-container { background: #0d1117 !important; font-family: 'Tajawal', sans-serif !important; }
+
     .guide-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .guide-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; backdrop-filter: blur(10px); }
     .guide-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(0,242,254,0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-cyan); flex-shrink: 0; }
@@ -154,16 +161,21 @@
         </div>
       </div>
 
-      <!-- الساعات مع الرسم البياني -->
+      <!-- الساعات مع الرسم البياني وخريطة الرادار الإخبارية -->
       <div id="page-hourly" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="hourlyTitle">توقعات الساعات القادمة</h3>
         <div class="hourly-scroll" id="hourlyContainer"></div>
 
         <div class="main-weather-card" style="margin-top: 10px; padding: 16px;">
           <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="chartTitle">📈 منحنى تغير درجات الحرارة</h4>
-          <div style="position: relative; width: 100%; height: 200px;">
+          <div style="position: relative; width: 100%; height: 180px;">
             <canvas id="tempChart"></canvas>
           </div>
+        </div>
+
+        <div class="main-weather-card" style="margin-top: 5px; padding: 16px;">
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="radarTitle">🛰️ رادار العواصف والأمطار الحي</h4>
+          <div id="radarMap"></div>
         </div>
       </div>
 
@@ -246,6 +258,7 @@
         aiAssistant: "المساعد الذكي",
         hourlyTitle: "توقعات الساعات القادمة",
         chartTitle: "📈 منحنى تغير درجات الحرارة",
+        radarTitle: "🛰️ رادار العواصف والأمطار الحي",
         dailyTitle: "توقعات الأسبوع",
         alertsTitle: "لوحة الإنذارات النشطة",
         guideTitle: "📖 دليل استخدام التطبيق",
@@ -271,6 +284,7 @@
         aiAssistant: "AI Assistant",
         hourlyTitle: "Hourly Forecast",
         chartTitle: "📈 Temperature Trend Graph",
+        radarTitle: "🛰️ Live Storm & Rain Radar",
         dailyTitle: "Weekly Forecast",
         alertsTitle: "Active Alerts Dashboard",
         guideTitle: "📖 App User Guide",
@@ -296,6 +310,7 @@
         aiAssistant: "Assistant IA",
         hourlyTitle: "Prévisions Horaires",
         chartTitle: "📈 Graphique de Température",
+        radarTitle: "🛰️ Radar Tempête & Pluie en Direct",
         dailyTitle: "Prévisions Semainières",
         alertsTitle: "Tableau des Alertes Actives",
         guideTitle: "📖 Guide d'Utilisation",
@@ -378,7 +393,6 @@
       return { t: currentLang === 'ar' ? 'غائم' : currentLang === 'fr' ? 'Nuageux' : 'Cloudy', i: 'cloud' };
     }
 
-    // دالة الألوان الديناميكية الحقيقية مع أوقات الشروق والغروب الفعلية لكل فصل
     function applyDynamicTheme(temp, code, isDay, sunriseStr, sunsetStr) {
       const container = document.getElementById('appContainer');
       let appGradient = '';
@@ -386,9 +400,8 @@
       let primaryCyan = '#00f2fe';
 
       const now = new Date();
-      const currentTimeStr = now.toTimeString().slice(0, 5); // HH:MM
+      const currentTimeStr = now.toTimeString().slice(0, 5);
 
-      // مقارنة الوقت الحالي بأوقات الشروق والغروب الفعلية المستلمة من الـ API
       const isSunsetTime = sunsetStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunsetStr.slice(0,2))) <= 1;
       const isSunriseTime = sunriseStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunriseStr.slice(0,2))) <= 1;
 
@@ -397,7 +410,6 @@
         bodyColor = '#090d16';
         primaryCyan = '#38bdf8';
       } else if (isSunsetTime || isSunriseTime) {
-        // وقت الشروق والغروب الفعلي (برتقالي مصفر دافئ في أي فصل)
         appGradient = 'linear-gradient(135deg, #3d220b 0%, #4a2e10 50%, #1f1105 100%)';
         bodyColor = '#140b03';
         primaryCyan = '#ffb703';
@@ -425,18 +437,13 @@
     }
 
     let tempChartInstance = null;
-
     function renderTempChart(labels, temps) {
       const ctx = document.getElementById('tempChart');
       if (!ctx) return;
-
-      if (tempChartInstance) {
-        tempChartInstance.destroy();
-      }
+      if (tempChartInstance) tempChartInstance.destroy();
 
       const primaryCyan = getComputedStyle(document.documentElement).getPropertyValue('--primary-cyan').trim() || '#00f2fe';
-
-      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 180);
+      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 160);
       gradient.addColorStop(0, primaryCyan + '55');
       gradient.addColorStop(1, primaryCyan + '00');
 
@@ -451,7 +458,7 @@
             borderWidth: 3,
             pointBackgroundColor: '#ffffff',
             pointBorderColor: primaryCyan,
-            pointRadius: 4,
+            pointRadius: 3,
             fill: true,
             backgroundColor: gradient,
             tension: 0.4
@@ -460,30 +467,37 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: 'rgba(22, 27, 34, 0.85)',
-              titleFont: { family: 'Tajawal', size: 12 },
-              bodyFont: { family: 'Tajawal', size: 13, weight: 'bold' },
-              displayColors: false,
-              callbacks: {
-                label: (context) => `${context.parsed.y}°C`
-              }
-            }
-          },
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(22, 27, 34, 0.85)' } },
           scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: '#a0aec0', font: { family: 'Tajawal', size: 10 } }
-            },
-            y: {
-              grid: { color: 'rgba(255, 255, 255, 0.08)' },
-              ticks: { color: '#a0aec0', font: { family: 'Tajawal', size: 10 } }
-            }
+            x: { grid: { display: false }, ticks: { color: '#a0aec0', font: { size: 9 } } },
+            y: { grid: { color: 'rgba(255, 255, 255, 0.08)' }, ticks: { color: '#a0aec0', font: { size: 9 } } }
           }
         }
       });
+    }
+
+    let radarMapInstance = null;
+    function initRadarMap(lat, lon) {
+      const mapContainer = document.getElementById('radarMap');
+      if (!mapContainer) return;
+
+      if (radarMapInstance) {
+        radarMapInstance.remove();
+      }
+
+      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+      }).addTo(radarMapInstance);
+
+      // طبقة رادار الطقس الحية الإخبارية
+      L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
+        opacity: 0.65,
+        maxZoom: 19
+      }).addTo(radarMapInstance);
+
+      L.marker([lat, lon]).addTo(radarMapInstance);
     }
 
     function escapeHTML(s) {
@@ -495,6 +509,9 @@
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
       document.getElementById('page-' + pageId).classList.add('active');
       btnElement.classList.add('active');
+      if (pageId === 'hourly' && radarMapInstance) {
+        setTimeout(() => radarMapInstance.invalidateSize(), 200);
+      }
     }
 
     function initApp() {
@@ -528,7 +545,6 @@
       try {
         document.getElementById('cityName').innerText = locationLabel;
 
-        // جلب بيانات الطقس متضمنة أوقات الشروق والغروب الفعلية في اليوم (sunrise & sunset)
         const url = 'https://api.open-meteo.com/v1/forecast'
           + `?latitude=${lat}&longitude=${lon}`
           + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,cloud_cover,is_day'
@@ -547,11 +563,11 @@
         const code = data.current.weather_code;
         const isDay = data.current.is_day;
         
-        // استخراج أقتات الشروق والغروب الفعلية لليوم الحالي
         const todaySunrise = data.daily?.sunrise?.[0] ? data.daily.sunrise[0].slice(11, 16) : null;
         const todaySunset = data.daily?.sunset?.[0] ? data.daily.sunset[0].slice(11, 16) : null;
 
         applyDynamicTheme(temp, code, isDay, todaySunrise, todaySunset);
+        initRadarMap(lat, lon);
         
         const info = skyInfo(code, data.current.cloud_cover, isDay);
 
