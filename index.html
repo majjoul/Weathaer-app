@@ -126,7 +126,6 @@
       cursor: pointer;
     }
 
-    /* نظام الصفحات */
     .page-section {
       display: none;
       flex-direction: column;
@@ -143,7 +142,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* بطاقات الطقس */
     .main-weather-card {
       background: var(--glass-bg);
       border: 1px solid var(--glass-border);
@@ -197,7 +195,6 @@
       font-weight: 700;
     }
 
-    /* قسم الساعات */
     .hourly-scroll {
       display: flex;
       gap: 10px;
@@ -235,7 +232,6 @@
       font-weight: 700;
     }
 
-    /* قسم الأيام */
     .daily-list {
       display: flex;
       flex-direction: column;
@@ -263,7 +259,6 @@
       color: var(--primary-cyan);
     }
 
-    /* تنبيهات Supabase */
     .alert-card {
       background: linear-gradient(135deg, rgba(255, 51, 102, 0.2) 0%, rgba(20, 10, 20, 0.6) 100%);
       border: 1px solid var(--danger-red);
@@ -288,7 +283,6 @@
       line-height: 1.4;
     }
 
-    /* شريط التنقل السفلي الزجاجي */
     .bottom-nav {
       position: absolute;
       bottom: 12px;
@@ -323,10 +317,6 @@
     .nav-item.active {
       color: var(--primary-cyan);
     }
-
-    .nav-item.active i {
-      filter: drop-shadow(0 0 8px var(--primary-cyan));
-    }
   </style>
 </head>
 <body>
@@ -349,7 +339,6 @@
 
       <!-- الصفحة الأولى: الرئيسية -->
       <div id="page-home" class="page-section active">
-        <!-- بطاقة الطقس الرئيسية -->
         <div class="main-weather-card">
           <div class="weather-icon-wrap" id="weatherIcon">
             <i data-lucide="cloud-sun" size="65" style="color: var(--primary-cyan);"></i>
@@ -376,7 +365,6 @@
           </div>
         </div>
 
-        <!-- المساعد الذكي -->
         <div class="ai-assistant-card" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(79, 172, 254, 0.05) 100%); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 20px; padding: 16px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
             <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue)); display: flex; align-items: center; justify-content: center; color: #000;">
@@ -390,40 +378,34 @@
         </div>
       </div>
 
-      <!-- الصفحة الثانية: الساعات القادمة -->
+      <!-- الصفحة الثانية: الساعات -->
       <div id="page-hourly" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">توقعات الساعات القادمة</h3>
-        <div class="hourly-scroll" id="hourlyContainer">
-          <!-- تُعبأ برمجياً -->
-        </div>
+        <div class="hourly-scroll" id="hourlyContainer"></div>
       </div>
 
-      <!-- الصفحة الثالثة: توقعات الأيام -->
+      <!-- الصفحة الثالثة: الأيام -->
       <div id="page-daily" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">توقعات الأسبوع</h3>
-        <div class="daily-list" id="dailyContainer">
-          <!-- تُعبأ برمجياً -->
-        </div>
+        <div class="daily-list" id="dailyContainer"></div>
       </div>
 
-      <!-- الصفحة الرابعة: التحذيرات والطوارئ (Supabase) -->
+      <!-- الصفحة الرابعة: الإنذارات -->
       <div id="page-alerts" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">لوحة الإنذارات النشطة</h3>
         <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px;">
-          <!-- تُعبأ برمجياً من قاعدة البيانات -->
           <div class="alert-card">
             <div class="alert-header">
               <i data-lucide="siren"></i>
               <span>لا توجد تحذيرات حالية</span>
             </div>
-            <div class="alert-body">النظام يعمل بشكل سليم ولم يتم رصد أي إنذارات طارئة من قاعدة بيانات Supabase.</div>
+            <div class="alert-body">النظام يعمل بشكل سليم.</div>
           </div>
         </div>
       </div>
 
     </div>
 
-    <!-- شريط التنقل السفلي -->
     <nav class="bottom-nav">
       <button class="nav-item active" onclick="switchPage('home', this)">
         <i data-lucide="home" size="20"></i>
@@ -442,7 +424,6 @@
         <span>الإنذارات</span>
       </button>
     </nav>
-
   </div>
 
   <script>
@@ -456,16 +437,13 @@
       console.error('Supabase Init Error:', e);
     }
 
-    // التنقل بين الصفحات
     function switchPage(pageId, btnElement) {
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-      
       document.getElementById('page-' + pageId).classList.add('active');
       btnElement.classList.add('active');
     }
 
-    // جلب الموقع والبيانات
     function initApp() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -473,38 +451,37 @@
             fetchWeatherData(position.coords.latitude, position.coords.longitude);
           },
           (error) => {
-            fetchWeatherData(48.8566, 2.3522); // باريس افتراضياً
+            fetchWeatherData(43.7102, 7.2620); // Nice, France افتراضياً
           },
           { timeout: 10000 }
         );
       } else {
-        fetchWeatherData(48.8566, 2.3522);
+        fetchWeatherData(43.7102, 7.2620);
       }
       fetchSupabaseAlerts();
     }
 
     async function fetchWeatherData(lat, lon) {
       try {
-        // اسم الموقع
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ar`);
         const geoData = await geoRes.json();
-        const city = geoData.address.city || geoData.address.town || geoData.address.state || 'موقعك الحالي';
+        const city = geoData.address.city || geoData.address.town || geoData.address.state || 'موقعك';
         const country = geoData.address.country || '';
-        document.getElementById('cityName').innerText = `${city}، ${country}`;
+        document.getElementById('cityName').innerText = `${city}, ${country}`;
 
-        // بيانات الطقس الشاملة (الحالي + الساعات + الأيام)
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min,time&timezone=auto`);
         const data = await res.json();
 
-        // الحالي
         const temp = Math.round(data.current.temperature_2m);
         document.getElementById('tempDegree').innerText = temp + '°';
         document.getElementById('windSpeed').innerText = data.current.wind_speed_10m + ' كم/س';
         document.getElementById('humidity').innerText = data.current.relative_humidity_2m + '%';
-        document.getElementById('weatherState').innerText = temp > 35 ? 'حرارة مرتفعة' : temp < 10 ? 'أجواء باردة' : 'أجواء معتدلة';
-        document.getElementById('aiAdvice').innerText = `الطقس في ${city} (${temp}°م). استمتع بيومك وخذ الحيطة إذا لزم الأمر.`;
+        
+        let stateText = temp > 35 ? 'حرارة مرتفعة' : temp < 10 ? 'أجواء باردة' : 'أجواء معتدلة ومنعشة';
+        document.getElementById('weatherState').innerText = stateText;
+        document.getElementById('aiAdvice').innerText = `الطقس الحالي في ${city} بمعدل ${temp}°م. استمتع بيومك في الهواء الطلق!`;
 
-        // الساعات (أول 24 ساعة)
+        // الساعات
         const hourlyContainer = document.getElementById('hourlyContainer');
         hourlyContainer.innerHTML = '';
         const nowIdx = new Date().getHours();
@@ -520,7 +497,7 @@
             </div>`;
         }
 
-        // الأيام (أسبوع كامل)
+        // الأيام
         const dailyContainer = document.getElementById('dailyContainer');
         dailyContainer.innerHTML = '';
         for (let i = 0; i < data.daily.time.length; i++) {
@@ -530,23 +507,21 @@
           dailyContainer.innerHTML += `
             <div class="day-row">
               <span class="day-name">${date}</span>
-              <div style="display: flex; gap: 10px;">
-                <span class="day-temp">${maxT}° / ${minT}°</span>
-              </div>
+              <span class="day-temp">${maxT}° / ${minT}°</span>
             </div>`;
         }
 
         lucide.createIcons();
       } catch (err) {
-        console.error('خطأ في جلب الطقس:', err);
+        console.error('خطأ في الطقس:', err);
+        document.getElementById('weatherState').innerText = 'تعذر جلب البيانات';
       }
     }
 
-    // جلب الإنذارات من Supabase وعرضها في صفحة الإنذارات
     async function fetchSupabaseAlerts() {
       if (!supabaseClient) return;
       try {
-        const { data, error } = await supabaseClient
+        const { data } = await supabaseClient
           .from('weather_alerts')
           .select('*')
           .eq('is_active', true);
@@ -567,7 +542,7 @@
         }
         lucide.createIcons();
       } catch (err) {
-        console.log('خطأ في جلب تنبيهات Supabase:', err);
+        console.log('خطأ Supabase:', err);
       }
     }
 
