@@ -31,19 +31,16 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; transition: background 0.5s ease; }
     body { background: #080a0f; color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
     
-    /* تصميم الحاوية في وضع الهاتف الافتراضي */
     .app-container { width: 100%; max-width: 420px; height: 780px; background: var(--bg-gradient); border-radius: 35px; padding: 20px 16px 80px 16px; box-shadow: 0 30px 60px rgba(0,0,0,.8), 0 0 40px rgba(0,242,254,.15); border: 1px solid var(--glass-border); position: relative; overflow: hidden; backdrop-filter: blur(20px); display: flex; flex-direction: column; }
     
-    /* تصميم وضع الحاسوب المرتب والاحترافي */
     body.desktop-mode .app-container { max-width: 1150px; height: 88vh; border-radius: 28px; padding: 25px 30px; overflow-y: auto; }
     body.desktop-mode .content-wrapper { display: flex; flex-direction: column; gap: 20px; }
     
-    /* شبكة تقسيم أعمدة الحاسوب بتركيب مرتب ومنطقي */
     body.desktop-mode .desktop-grid { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
     body.desktop-mode .desktop-col-left { display: flex; flex-direction: column; gap: 16px; }
     body.desktop-mode .desktop-col-right { display: flex; flex-direction: column; gap: 16px; }
 
-    body.desktop-mode .bottom-nav { display: none; } /* إخفاء شريط الهاتف السفلي في الحاسوب */
+    body.desktop-mode .bottom-nav { display: none; }
     body.desktop-mode .page-section { display: flex !important; opacity: 1 !important; transform: none !important; }
 
     .glow-sphere-1 { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,242,254,.3) 0%, transparent 70%); z-index: 0; pointer-events: none; }
@@ -140,10 +137,9 @@
         </div>
       </div>
 
-      <!-- محتوى التطبيق مع دعم التخطيط المنظم في وضع الحاسوب -->
       <div class="desktop-grid" id="desktopGridContainer">
         
-        <!-- العمود الأيسر (الرئيسية، المساعد، والشمس) -->
+        <!-- العمود الأيسر -->
         <div class="desktop-col-left">
           <div class="main-weather-card">
             <div class="weather-icon-wrap" id="weatherIcon">
@@ -203,7 +199,7 @@
           </div>
         </div>
 
-        <!-- العمود الأيمن (الساعات، المنحنى البياني، والأسبوع) -->
+        <!-- العمود الأيمن -->
         <div class="desktop-col-right">
           <div id="page-hourly" class="page-section active" style="display: flex; flex-direction: column; gap: 16px;">
             <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="hourlyTitle">توقعات الساعات القادمة</h3>
@@ -239,7 +235,6 @@
 
     </div>
 
-    <!-- شريط التنقل السفلي للهواتف -->
     <nav class="bottom-nav" id="bottomNav">
       <button class="nav-item active" onclick="switchPage('home', this)">
         <i data-lucide="home" style="width:20px;height:20px;"></i><span data-i18n="navHome">الرئيسية</span>
@@ -607,14 +602,17 @@
         radarMapInstance.remove();
       }
 
-      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 9);
+      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
+      // خريطة الخلفية الداكنة المتناسقة
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
       }).addTo(radarMapInstance);
 
+      // طبقة رادار الأمطار السحابية الملونة والواضحة
       L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
-        opacity: 0.65,
+        opacity: 0.85,
         maxZoom: 19
       }).addTo(radarMapInstance);
 
