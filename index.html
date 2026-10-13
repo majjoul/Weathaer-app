@@ -31,21 +31,26 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; transition: background 0.5s ease; }
     body { background: #080a0f; color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
     
-    /* تصميم الحاوية المتجاوبة (تلقائي للهاتف أو الحاسوب) */
+    /* تصميم الحاوية في وضع الهاتف الافتراضي */
     .app-container { width: 100%; max-width: 420px; height: 780px; background: var(--bg-gradient); border-radius: 35px; padding: 20px 16px 80px 16px; box-shadow: 0 30px 60px rgba(0,0,0,.8), 0 0 40px rgba(0,242,254,.15); border: 1px solid var(--glass-border); position: relative; overflow: hidden; backdrop-filter: blur(20px); display: flex; flex-direction: column; }
     
-    /* وضع سطح المكتب (Desktop Mode) */
-    body.desktop-mode .app-container { max-width: 1050px; height: 88vh; border-radius: 24px; padding: 25px; overflow-y: auto; }
-    body.desktop-mode .content-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    body.desktop-mode .header { grid-column: span 2; }
-    body.desktop-mode .bottom-nav { display: none; } /* إخفاء شريط الموبايل السفلي في وضع الحاسوب وعرض الأقسام كاملة */
+    /* تصميم وضع الحاسوب المرتب والاحترافي */
+    body.desktop-mode .app-container { max-width: 1150px; height: 88vh; border-radius: 28px; padding: 25px 30px; overflow-y: auto; }
+    body.desktop-mode .content-wrapper { display: flex; flex-direction: column; gap: 20px; }
+    
+    /* شبكة تقسيم أعمدة الحاسوب بتركيب مرتب ومنطقي */
+    body.desktop-mode .desktop-grid { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
+    body.desktop-mode .desktop-col-left { display: flex; flex-direction: column; gap: 16px; }
+    body.desktop-mode .desktop-col-right { display: flex; flex-direction: column; gap: 16px; }
+
+    body.desktop-mode .bottom-nav { display: none; } /* إخفاء شريط الهاتف السفلي في الحاسوب */
     body.desktop-mode .page-section { display: flex !important; opacity: 1 !important; transform: none !important; }
 
     .glow-sphere-1 { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,242,254,.3) 0%, transparent 70%); z-index: 0; pointer-events: none; }
     .glow-sphere-2 { position: absolute; bottom: 100px; left: -80px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,51,102,.25) 0%, transparent 70%); z-index: 0; pointer-events: none; }
     .content-wrapper { position: relative; z-index: 1; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
     .content-wrapper::-webkit-scrollbar { display: none; }
-    .header { display: flex; justify-content: space-between; align-items: center; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .location-box { display: flex; align-items: center; gap: 8px; }
     .location-title { font-size: 1.05rem; font-weight: 700; }
     .header-actions { display: flex; gap: 8px; }
@@ -135,128 +140,107 @@
         </div>
       </div>
 
-      <!-- الرئيسية -->
-      <div id="page-home" class="page-section active">
-        <div class="main-weather-card">
-          <div class="weather-icon-wrap" id="weatherIcon">
-            <i data-lucide="cloud-sun" style="width:65px;height:65px;color: var(--primary-cyan);"></i>
-          </div>
-          <div class="temp-number" id="tempDegree">--°</div>
-          <div class="weather-status" id="weatherState">جاري التحميل...</div>
-
-          <div class="weather-stats-grid">
-            <div class="stat-item">
-              <i data-lucide="wind" style="width:16px;height:16px;color: var(--primary-cyan);"></i>
-              <span class="stat-label" data-i18n="wind">الرياح</span>
-              <span class="stat-value" id="windSpeed">-- كم/س</span>
-            </div>
-            <div class="stat-item">
-              <i data-lucide="droplets" style="width:16px;height:16px;color: var(--primary-blue);"></i>
-              <span class="stat-label" data-i18n="humidity">الرطوبة</span>
-              <span class="stat-value" id="humidity">--%</span>
-            </div>
-            <div class="stat-item">
-              <i data-lucide="compass" style="width:16px;height:16px;color: var(--warning-amber);"></i>
-              <span class="stat-label" data-i18n="status">الحالة</span>
-              <span class="stat-value" id="windDir">--</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="ai-assistant-card" style="background: linear-gradient(135deg, rgba(0,242,254,.12) 0%, rgba(79,172,254,.05) 100%); border: 1px solid rgba(0,242,254,.3); border-radius: 20px; padding: 16px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue)); display: flex; align-items: center; justify-content: center; color: #000;">
-              <i data-lucide="bot" style="width:16px;height:16px;"></i>
-            </div>
-            <span style="font-weight: 700; font-size: .95rem; color: var(--primary-cyan);" data-i18n="aiAssistant">المساعد الذكي</span>
-          </div>
-          <div id="aiAdvice" style="font-size: .88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0,0,0,.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
-            جاري تحضير بيانات الطقس...
-          </div>
-        </div>
-
-        <!-- بطاقة منحنى الشمس التفاعلية -->
-        <div class="sun-card">
-          <div class="sun-header">
-            <span id="sunriseLabelText" data-i18n="sunriseText">الشروق: --:--</span>
-            <span id="sunsetLabelText" data-i18n="sunsetText">الغروب: --:--</span>
-          </div>
-          <div class="sun-arc-wrap">
-            <svg class="sun-svg" viewBox="0 0 300 100">
-              <line x1="0" y1="70" x2="300" y2="70" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4" stroke-width="2" />
-              <path id="sunPath" d="M 20 70 Q 150 -10 280 70" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3" />
-              <path id="sunProgressPath" d="M 20 70 Q 150 -10 280 70" fill="none" stroke="#ffb703" stroke-width="3" stroke-dasharray="300" stroke-dashoffset="300" />
-              <circle id="sunNode" cx="20" cy="70" r="7" fill="#ffb703" stroke="#fff" stroke-width="2" />
-            </svg>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 0.9rem; color: #fff; direction: ltr;">
-            <span id="valSunrise">--:--</span>
-            <span id="valSunset">--:--</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- الساعات مع الرسم البياني -->
-      <div id="page-hourly" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="hourlyTitle">توقعات الساعات القادمة</h3>
-        <div class="hourly-scroll" id="hourlyContainer"></div>
-
-        <div class="main-weather-card" style="margin-top: 10px; padding: 16px;">
-          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="chartTitle">📈 منحنى تغير درجات الحرارة</h4>
-          <div style="position: relative; width: 100%; height: 220px;">
-            <canvas id="tempChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- رادار العواصف -->
-      <div id="page-radar" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="radarTitle">🛰️ رادار العواصف والأمطار الحي</h3>
-        <div class="main-weather-card" style="padding: 12px;">
-          <div id="radarMap"></div>
-        </div>
-      </div>
-
-      <!-- الأيام -->
-      <div id="page-daily" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="dailyTitle">توقعات الأسبوع</h3>
-        <div class="daily-list" id="dailyContainer"></div>
-      </div>
-
-      <!-- الإنذارات والدليل -->
-      <div id="page-alerts" class="page-section">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="alertsTitle">لوحة الإنذارات النشطة</h3>
-        <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;"></div>
+      <!-- محتوى التطبيق مع دعم التخطيط المنظم في وضع الحاسوب -->
+      <div class="desktop-grid" id="desktopGridContainer">
         
-        <h3 style="font-size: 1rem; font-weight: 700; margin-top: 10px; margin-bottom: 4px;" data-i18n="guideTitle">📖 دليل استخدام التطبيق</h3>
-        <div class="guide-grid">
-          <div class="guide-card">
-            <div class="guide-icon"><i data-lucide="cloud-sun"></i></div>
-            <div class="guide-content">
-              <h4 data-i18n="g1Title">الطقس الحي الفوري</h4>
-              <p data-i18n="g1Desc">يعرض درجات الحرارة والرطوبة والرياح المحدثة بناءً على موقعك الجغرافي الحالي بدقة.</p>
+        <!-- العمود الأيسر (الرئيسية، المساعد، والشمس) -->
+        <div class="desktop-col-left">
+          <div class="main-weather-card">
+            <div class="weather-icon-wrap" id="weatherIcon">
+              <i data-lucide="cloud-sun" style="width:65px;height:65px;color: var(--primary-cyan);"></i>
+            </div>
+            <div class="temp-number" id="tempDegree">--°</div>
+            <div class="weather-status" id="weatherState">جاري التحميل...</div>
+
+            <div class="weather-stats-grid">
+              <div class="stat-item">
+                <i data-lucide="wind" style="width:16px;height:16px;color: var(--primary-cyan);"></i>
+                <span class="stat-label" data-i18n="wind">الرياح</span>
+                <span class="stat-value" id="windSpeed">-- كم/س</span>
+              </div>
+              <div class="stat-item">
+                <i data-lucide="droplets" style="width:16px;height:16px;color: var(--primary-blue);"></i>
+                <span class="stat-label" data-i18n="humidity">الرطوبة</span>
+                <span class="stat-value" id="humidity">--%</span>
+              </div>
+              <div class="stat-item">
+                <i data-lucide="compass" style="width:16px;height:16px;color: var(--warning-amber);"></i>
+                <span class="stat-label" data-i18n="status">الحالة</span>
+                <span class="stat-value" id="windDir">--</span>
+              </div>
             </div>
           </div>
-          <div class="guide-card">
-            <div class="guide-icon"><i data-lucide="bell-ring"></i></div>
-            <div class="guide-content">
-              <h4 data-i18n="g2Title">نظام التنبيهات والـ Push</h4>
-              <p data-i18n="g2Desc">يستقبل إشعارات الطوارئ الفورية حتى لو كان التطبيق مغلقاً لحمايتك في الظروف الخطرة.</p>
+
+          <div class="ai-assistant-card" style="background: linear-gradient(135deg, rgba(0,242,254,.12) 0%, rgba(79,172,254,.05) 100%); border: 1px solid rgba(0,242,254,.3); border-radius: 20px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue)); display: flex; align-items: center; justify-content: center; color: #000;">
+                <i data-lucide="bot" style="width:16px;height:16px;"></i>
+              </div>
+              <span style="font-weight: 700; font-size: .95rem; color: var(--primary-cyan);" data-i18n="aiAssistant">المساعد الذكي</span>
+            </div>
+            <div id="aiAdvice" style="font-size: .88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0,0,0,.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
+              جاري تحضير بيانات الطقس...
             </div>
           </div>
-          <div class="guide-card">
-            <div class="guide-icon"><i data-lucide="palette"></i></div>
-            <div class="guide-content">
-              <h4 data-i18n="g3Title">ألوان ديناميكية ذكية</h4>
-              <p data-i18n="g3Desc">تتغير تدرجات الخلفية تلقائياً لتتناسب مع حالة الطقس الحالية (حرارة، أمطار، ليل).</p>
+
+          <div class="sun-card">
+            <div class="sun-header">
+              <span id="sunriseLabelText" data-i18n="sunriseText">الشروق: --:--</span>
+              <span id="sunsetLabelText" data-i18n="sunsetText">الغروب: --:--</span>
+            </div>
+            <div class="sun-arc-wrap">
+              <svg class="sun-svg" viewBox="0 0 300 100">
+                <line x1="0" y1="70" x2="300" y2="70" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4" stroke-width="2" />
+                <path id="sunPath" d="M 20 70 Q 150 -10 280 70" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3" />
+                <path id="sunProgressPath" d="M 20 70 Q 150 -10 280 70" fill="none" stroke="#ffb703" stroke-width="3" stroke-dasharray="300" stroke-dashoffset="300" />
+                <circle id="sunNode" cx="20" cy="70" r="7" fill="#ffb703" stroke="#fff" stroke-width="2" />
+              </svg>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 0.9rem; color: #fff; direction: ltr;">
+              <span id="valSunrise">--:--</span>
+              <span id="valSunset">--:--</span>
             </div>
           </div>
         </div>
+
+        <!-- العمود الأيمن (الساعات، المنحنى البياني، والأسبوع) -->
+        <div class="desktop-col-right">
+          <div id="page-hourly" class="page-section active" style="display: flex; flex-direction: column; gap: 16px;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="hourlyTitle">توقعات الساعات القادمة</h3>
+            <div class="hourly-scroll" id="hourlyContainer"></div>
+
+            <div class="main-weather-card" style="padding: 16px;">
+              <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="chartTitle">📈 منحنى تغير درجات الحرارة</h4>
+              <div style="position: relative; width: 100%; height: 200px;">
+                <canvas id="tempChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div id="page-radar" class="page-section" style="display: flex; flex-direction: column; gap: 16px;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="radarTitle">🛰️ رادار العواصف والأمطار الحي</h3>
+            <div class="main-weather-card" style="padding: 12px;">
+              <div id="radarMap"></div>
+            </div>
+          </div>
+
+          <div id="page-daily" class="page-section" style="display: flex; flex-direction: column; gap: 16px;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="dailyTitle">توقعات الأسبوع</h3>
+            <div class="daily-list" id="dailyContainer"></div>
+          </div>
+
+          <div id="page-alerts" class="page-section" style="display: flex; flex-direction: column; gap: 16px;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="alertsTitle">لوحة الإنذارات النشطة</h3>
+            <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;"></div>
+          </div>
+        </div>
+
       </div>
 
     </div>
 
-    <nav class="bottom-nav">
+    <!-- شريط التنقل السفلي للهواتف -->
+    <nav class="bottom-nav" id="bottomNav">
       <button class="nav-item active" onclick="switchPage('home', this)">
         <i data-lucide="home" style="width:20px;height:20px;"></i><span data-i18n="navHome">الرئيسية</span>
       </button>
@@ -360,8 +344,6 @@
         humidity: "Humidité",
         status: "Condition",
         aiAssistant: "Assistant IA",
-        sunriseText: "Lever de soleil",
-        sunsetText: "Coucher de soleil",
         hourlyTitle: "Prévisions Horaires",
         chartTitle: "📈 Graphique de Température",
         radarTitle: "🛰️ Radar Tempête & Pluie en Direct",
@@ -385,7 +367,7 @@
         sunriseAlertTitle: "🌅 Alerte Lever du Soleil",
         sunriseAlertMsg: "Le soleil vient de se lever. Passez une excellente journée !",
         sunsetAlertTitle: "🌇 Alerte Coucher du Soleil",
-        sunsetAlertMsg: "Le soleil s'est couché. Profitez-vous de votre soirée !"
+        sunsetAlertMsg: "Le soleil s'est couché. Profitez de votre soirée !"
       }
     };
 
@@ -409,7 +391,6 @@
       initApp();
     }
 
-    // زر التبديل اليدوي بين وضع الحاسوب والهاتف
     function toggleDesktopMode() {
       const body = document.body;
       const btn = document.getElementById('desktopToggleBtn');
@@ -422,7 +403,6 @@
       }
     }
 
-    // الكشف التلقائي عن الشاشة الكبيرة عند فتح التطبيق
     function autoDetectDevice() {
       if (window.innerWidth > 900) {
         document.body.classList.add('desktop-mode');
@@ -678,7 +658,7 @@
     }
 
     function switchPage(pageId, btnElement) {
-      if (document.body.classList.contains('desktop-mode')) return; // في وضع الحاسوب كل الأقسام معروضة معاً
+      if (document.body.classList.contains('desktop-mode')) return;
 
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
@@ -856,7 +836,7 @@
           .from('weather_alerts')
           .select('*')
           .eq('is_active', true);
-        if (error) error;
+        if (error) throw error;
 
         if (data && data.length > 0) {
           container.innerHTML = data.map(a => `
