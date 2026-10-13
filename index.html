@@ -109,7 +109,7 @@
     }
 
     .location-title {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 700;
     }
 
@@ -330,7 +330,7 @@
       <div class="header">
         <div class="location-box">
           <i data-lucide="map-pin" style="color: var(--primary-cyan);"></i>
-          <span class="location-title" id="cityName">جاري تحديد الموقع...</span>
+          <span class="location-title" id="cityName">جاري تحديد موقعك الجغرافي...</span>
         </div>
         <button class="icon-btn" onclick="initApp()">
           <i data-lucide="rotate-cw"></i>
@@ -373,7 +373,7 @@
             <span style="font-weight: 700; font-size: 0.95rem; color: var(--primary-cyan);">المساعد الذكي</span>
           </div>
           <div id="aiAdvice" style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
-            جاري تحليل حالة الطقس...
+            جاري تحليل حالة الطقس لموقعك...
           </div>
         </div>
       </div>
@@ -445,30 +445,47 @@
     }
 
     function initApp() {
+      // طلب الموقع الجغرافي الفعلي للمستخدم أينما كان
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-            fetchWeatherData(position.coords.latitude, position.coords.longitude);
+          async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            await fetchCityNameAndWeather(lat, lon);
           },
           (error) => {
-            fetchWeatherData(43.7102, 7.2620); // Nice, France افتراضياً
+            console.warn('تم رفض إذن الموقع، سيتم استخدام موقع افتراضي عالمي.');
+            // احتياطي في حال رفض المستخدم إذن الموقع (باريس كمثال افتراضي عام)
+            fetchCityNameAndWeather(48.8566, 2.3522);
           },
-          { timeout: 10000 }
+          { timeout: 10000, enableHighAccuracy: true }
         );
       } else {
-        fetchWeatherData(43.7102, 7.2620);
+        fetchCityNameAndWeather(48.8566, 2.3522);
       }
       fetchSupabaseAlerts();
     }
 
-    async function fetchWeatherData(lat, lon) {
+    async function fetchCityNameAndWeather(lat, lon) {
+      let cityName = "موقعك الحالي";
       try {
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ar`);
         const geoData = await geoRes.json();
-        const city = geoData.address.city || geoData.address.town || geoData.address.state || 'موقعك';
-        const country = geoData.address.country || '';
-        document.getElementById('cityName').innerText = `${city}, ${country}`;
+        if (geoData && geoData.address) {
+          const city = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.state || '';
+          const country = geoData.address.country || '';
+          cityName = city ? `${city}، ${country}` : country;
+        }
+      } catch (e) {
+        console.log("تعذر جلب اسم المدينة بالاسم، سيتم الاعتماد على الإحداثيات.");
+      }
 
+      document.getElementById('cityName').innerText = cityName;
+      fetchWeatherData(lat, lon, cityName);
+    }
+
+    async function fetchWeatherData(lat, lon, cityName) {
+      try {
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min,time&timezone=auto`);
         const data = await res.json();
 
@@ -479,9 +496,9 @@
         
         let stateText = temp > 35 ? 'حرارة مرتفعة' : temp < 10 ? 'أجواء باردة' : 'أجواء معتدلة ومنعشة';
         document.getElementById('weatherState').innerText = stateText;
-        document.getElementById('aiAdvice').innerText = `الطقس الحالي في ${city} بمعدل ${temp}°م. استمتع بيومك في الهواء الطلق!`;
+        document.getElementById('aiAdvice').innerText = `الطقس الحالي في ${cityName} بمعدل ${temp}°م. استمتع بيومك في الهواء الطلق!`;
 
-        // الساعات
+        // الساعات القادمة
         const hourlyContainer = document.getElementById('hourlyContainer');
         hourlyContainer.innerHTML = '';
         const nowIdx = new Date().getHours();
@@ -497,7 +514,7 @@
             </div>`;
         }
 
-        // الأيام
+        // توقعات الأسبوع
         const dailyContainer = document.getElementById('dailyContainer');
         dailyContainer.innerHTML = '';
         for (let i = 0; i < data.daily.time.length; i++) {
