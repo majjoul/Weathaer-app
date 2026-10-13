@@ -118,7 +118,7 @@
       cursor: pointer;
     }
 
-    /* بطاقة التحذير الطارئ (تظهر تلقائياً من Supabase) */
+    /* بطاقة التحذير الطارئ */
     .alert-card {
       display: none;
       background: linear-gradient(135deg, rgba(255, 51, 102, 0.2) 0%, rgba(20, 10, 20, 0.6) 100%);
@@ -283,7 +283,7 @@
         </button>
       </div>
 
-      <!-- بطاقة التحذير الطارئ (تسحب من Supabase) -->
+      <!-- بطاقة التحذير الطارئ -->
       <div class="alert-card" id="alertBox">
         <div class="alert-header">
           <i data-lucide="siren"></i>
@@ -341,7 +341,7 @@
   <script>
     lucide.createIcons();
 
-    // 🔑 ربط Supabase بالمشروع الحقيقي
+    // إعدادات الاتصال الصحيحة
     const SUPABASE_URL = 'https://pueegfwjftltzlvrhyww.supabase.co';
     const SUPABASE_ANON_KEY = 'Sb_publishable_bEHmHW3g4CI7Wjp1D1lhWg_81MK0FS0';
     
@@ -362,7 +362,6 @@
         document.getElementById('windSpeed').innerText = wind + ' كم/س';
         document.getElementById('humidity').innerText = humidity + '%';
 
-        // توجيهات ومساعد ذكي يتفاعل حسب درجة الحرارة
         let advice = '';
         if (temp > 40) {
           document.getElementById('weatherState').innerText = 'حرارة شديدة جداً';
@@ -381,7 +380,7 @@
       }
     }
 
-    // جلب التحذيرات الحية من جدول weather_alerts في Supabase
+    // جلب التحذيرات من Supabase (تم تصحيح الخطأ هنا)
     async function fetchAlertsFromSupabase() {
       try {
         const { data, error } = await supabaseClient
@@ -398,12 +397,12 @@
         } else {
           document.getElementById('alertBox').style.display = 'none';
         }
-      }كان (err) {
+      } catch (err) {
         console.log('خطأ بالاتصال بـ Supabase:', err);
       }
     }
 
-    // التشغيل
+    // التشغيل الفوري
     fetchWeatherData();
     fetchAlertsFromSupabase();
   </script>
