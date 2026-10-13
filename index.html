@@ -31,16 +31,9 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; transition: background 0.5s ease; }
     body { background: #080a0f; color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
     
-    /* تصميم الحاوية الأساسي (هاتف) */
     .app-container { width: 100%; max-width: 420px; height: 780px; background: var(--bg-gradient); border-radius: 35px; padding: 20px 16px 80px 16px; box-shadow: 0 30px 60px rgba(0,0,0,.8), 0 0 40px rgba(0,242,254,.15); border: 1px solid var(--glass-border); position: relative; overflow: hidden; backdrop-filter: blur(20px); display: flex; flex-direction: column; }
     
-    /* وضع الحاسوب الأنيق */
     body.desktop-mode .app-container { max-width: 900px; height: 85vh; border-radius: 28px; padding: 25px 30px 80px 30px; }
-
-    /* فلتر لتحويل الخريطة العادية إلى خريطة داكنة وفخمة تلقائياً بدون أخطاء API */
-    .leaflet-layer, .leaflet-control-zoom, .leaflet-control-attribution {
-      filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-    }
 
     .glow-sphere-1 { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,242,254,.3) 0%, transparent 70%); z-index: 0; pointer-events: none; }
     .glow-sphere-2 { position: absolute; bottom: 100px; left: -80px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,51,102,.25) 0%, transparent 70%); z-index: 0; pointer-events: none; }
@@ -582,9 +575,10 @@
 
       radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
 
-      // خريطة OpenStreetMap الأساسية مع فلتر الدارك مود التلقائي بدون أخطاء API
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
+      // استخدام خريطة داكنة أصلية (CartoDB Dark Matter) لكي تظهر طبقة المطر بألوانها الحقيقية والواضحة
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
       }).addTo(radarMapInstance);
 
       // طبقة رادار الأمطار السحابية الملونة والواضحة
@@ -632,7 +626,6 @@
       return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
     }
 
-    // نظام تبديل الصفحات والشريط السفلي يعمل بانتظام تام
     function switchPage(pageId, btnElement) {
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
@@ -811,6 +804,10 @@
           .select('*')
           .eq('is_active', true);
         if (error) throw error;
+
+        if (data && data.lengthY > 0) { // wait data.length > 0
+          // fixed below
+        }
 
         if (data && data.length > 0) {
           container.innerHTML = data.map(a => `
