@@ -46,14 +46,17 @@
     .app-container {
       width: 100%;
       max-width: 420px;
+      height: 780px;
       background: var(--bg-gradient);
       border-radius: 35px;
-      padding: 24px 20px;
+      padding: 20px 16px 80px 16px;
       box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 242, 254, 0.15);
       border: 1px solid var(--glass-border);
       position: relative;
       overflow: hidden;
       backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
     }
 
     .glow-sphere-1 {
@@ -81,9 +84,16 @@
     .content-wrapper {
       position: relative;
       z-index: 1;
+      flex: 1;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
+      padding-bottom: 20px;
+    }
+
+    .content-wrapper::-webkit-scrollbar {
+      display: none;
     }
 
     .header {
@@ -107,76 +117,44 @@
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--glass-border);
       color: #fff;
-      width: 42px;
-      height: 42px;
-      border-radius: 14px;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
     }
 
-    .alert-card {
+    /* نظام الصفحات */
+    .page-section {
       display: none;
-      background: linear-gradient(135deg, rgba(255, 51, 102, 0.2) 0%, rgba(20, 10, 20, 0.6) 100%);
-      border: 1px solid var(--danger-red);
-      border-radius: 24px;
-      padding: 16px 18px;
-      box-shadow: 0 10px 25px var(--danger-glow);
-      animation: alertPulse 2.5s infinite ease-in-out;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeIn 0.3s ease-in-out;
     }
 
-    @keyframes alertPulse {
-      0%, 100% { box-shadow: 0 0 15px var(--danger-glow); border-color: rgba(255, 51, 102, 0.8); }
-      50% { box-shadow: 0 0 30px rgba(255, 51, 102, 0.8); border-color: #ff3366; }
-    }
-
-    .alert-header {
+    .page-section.active {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--danger-red);
-      font-weight: 800;
-      font-size: 1.05rem;
-      margin-bottom: 6px;
     }
 
-    .alert-badge {
-      background: var(--danger-red);
-      color: #fff;
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 8px;
-      font-weight: 900;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    .alert-body {
-      font-size: 0.9rem;
-      color: #ffd6e0;
-      line-height: 1.4;
-    }
-
+    /* بطاقات الطقس */
     .main-weather-card {
       background: var(--glass-bg);
       border: 1px solid var(--glass-border);
-      border-radius: 28px;
-      padding: 25px 20px;
+      border-radius: 26px;
+      padding: 22px 18px;
       text-align: center;
       backdrop-filter: blur(15px);
     }
 
-    .weather-icon-wrap {
-      width: 90px;
-      height: 90px;
-      margin: 0 auto 10px auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      filter: drop-shadow(0 0 15px rgba(0, 242, 254, 0.6));
-    }
-
     .temp-number {
-      font-size: 3.8rem;
+      font-size: 3.5rem;
       font-weight: 900;
       background: linear-gradient(180deg, #ffffff 30%, #a0aec0 100%);
       -webkit-background-clip: text;
@@ -186,19 +164,19 @@
     }
 
     .weather-status {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       color: var(--primary-cyan);
       font-weight: 700;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .weather-stats-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      gap: 8px;
       background: rgba(0, 0, 0, 0.25);
-      padding: 12px;
-      border-radius: 18px;
+      padding: 10px;
+      border-radius: 16px;
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
@@ -206,59 +184,148 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
     }
 
     .stat-label {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
     }
 
     .stat-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    /* قسم الساعات */
+    .hourly-scroll {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+    }
+    .hourly-scroll::-webkit-scrollbar {
+      height: 4px;
+    }
+    .hourly-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+    }
+
+    .hour-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 12px 10px;
+      min-width: 65px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(10px);
+    }
+
+    .hour-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .hour-temp {
       font-size: 0.95rem;
       font-weight: 700;
     }
 
-    .ai-assistant-card {
-      background: linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(79, 172, 254, 0.05) 100%);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      border-radius: 24px;
-      padding: 18px;
-    }
-
-    .ai-header {
+    /* قسم الأيام */
+    .daily-list {
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 10px;
-      margin-bottom: 8px;
     }
 
-    .ai-icon-box {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue));
+    .day-row {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 12px 16px;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      color: #000;
-      box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+      backdrop-filter: blur(10px);
     }
 
-    .ai-title {
+    .day-name {
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .day-temp {
+      font-weight: 700;
       color: var(--primary-cyan);
     }
 
-    .ai-advice-text {
-      font-size: 0.92rem;
-      color: #e2e8f0;
-      line-height: 1.5;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 10px 14px;
-      border-radius: 14px;
-      border-right: 3px solid var(--primary-cyan);
+    /* تنبيهات Supabase */
+    .alert-card {
+      background: linear-gradient(135deg, rgba(255, 51, 102, 0.2) 0%, rgba(20, 10, 20, 0.6) 100%);
+      border: 1px solid var(--danger-red);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 10px 25px var(--danger-glow);
+    }
+
+    .alert-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--danger-red);
+      font-weight: 800;
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .alert-body {
+      font-size: 0.88rem;
+      color: #ffd6e0;
+      line-height: 1.4;
+    }
+
+    /* شريط التنقل السفلي الزجاجي */
+    .bottom-nav {
+      position: absolute;
+      bottom: 12px;
+      left: 16px;
+      right: 16px;
+      height: 60px;
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      backdrop-filter: blur(20px);
+      z-index: 10;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .nav-item {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item.active {
+      color: var(--primary-cyan);
+    }
+
+    .nav-item.active i {
+      filter: drop-shadow(0 0 8px var(--primary-cyan));
     }
   </style>
 </head>
@@ -273,66 +340,109 @@
       <div class="header">
         <div class="location-box">
           <i data-lucide="map-pin" style="color: var(--primary-cyan);"></i>
-          <span class="location-title" id="cityName">جاري طلب إذن الموقع...</span>
+          <span class="location-title" id="cityName">جاري تحديد الموقع...</span>
         </div>
-        <button class="icon-btn" onclick="getLocationAndWeather()">
+        <button class="icon-btn" onclick="initApp()">
           <i data-lucide="rotate-cw"></i>
         </button>
       </div>
 
-      <!-- بطاقة التحذير الطارئ (من Supabase) -->
-      <div class="alert-card" id="alertBox">
-        <div class="alert-header">
-          <i data-lucide="siren"></i>
-          <span id="alertTitle">تنبيه طارئ!</span>
-          <span class="alert-badge">عاجل</span>
+      <!-- الصفحة الأولى: الرئيسية -->
+      <div id="page-home" class="page-section active">
+        <!-- بطاقة الطقس الرئيسية -->
+        <div class="main-weather-card">
+          <div class="weather-icon-wrap" id="weatherIcon">
+            <i data-lucide="cloud-sun" size="65" style="color: var(--primary-cyan);"></i>
+          </div>
+          <div class="temp-number" id="tempDegree">--°</div>
+          <div class="weather-status" id="weatherState">جاري التحميل...</div>
+
+          <div class="weather-stats-grid">
+            <div class="stat-item">
+              <i data-lucide="wind" size="16" style="color: var(--primary-cyan);"></i>
+              <span class="stat-label">الرياح</span>
+              <span class="stat-value" id="windSpeed">-- كم/س</span>
+            </div>
+            <div class="stat-item">
+              <i data-lucide="droplets" size="16" style="color: var(--primary-blue);"></i>
+              <span class="stat-label">الرطوبة</span>
+              <span class="stat-value" id="humidity">--%</span>
+            </div>
+            <div class="stat-item">
+              <i data-lucide="compass" size="16" style="color: var(--warning-amber);"></i>
+              <span class="stat-label">الحالة</span>
+              <span class="stat-value" id="windDir">مباشر</span>
+            </div>
+          </div>
         </div>
-        <div class="alert-body" id="alertText">
-          جاري التحقق من التحذيرات...
+
+        <!-- المساعد الذكي -->
+        <div class="ai-assistant-card" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(79, 172, 254, 0.05) 100%); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 20px; padding: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue)); display: flex; align-items: center; justify-content: center; color: #000;">
+              <i data-lucide="bot" size="16"></i>
+            </div>
+            <span style="font-weight: 700; font-size: 0.95rem; color: var(--primary-cyan);">المساعد الذكي</span>
+          </div>
+          <div id="aiAdvice" style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
+            جاري تحليل حالة الطقس...
+          </div>
         </div>
       </div>
 
-      <!-- بطاقة الطقس الرئيسية -->
-      <div class="main-weather-card">
-        <div class="weather-icon-wrap" id="weatherIcon">
-          <i data-lucide="cloud-sun" size="70" style="color: var(--primary-cyan);"></i>
-        </div>
-        <div class="temp-number" id="tempDegree">--°</div>
-        <div class="weather-status" id="weatherState">جاري التحميل...</div>
-
-        <div class="weather-stats-grid">
-          <div class="stat-item">
-            <i data-lucide="wind" size="18" style="color: var(--primary-cyan);"></i>
-            <span class="stat-label">الرياح</span>
-            <span class="stat-value" id="windSpeed">-- كم/س</span>
-          </div>
-          <div class="stat-item">
-            <i data-lucide="droplets" size="18" style="color: var(--primary-blue);"></i>
-            <span class="stat-label">الرطوبة</span>
-            <span class="stat-value" id="humidity">--%</span>
-          </div>
-          <div class="stat-item">
-            <i data-lucide="compass" size="18" style="color: var(--warning-amber);"></i>
-            <span class="stat-label">الحالة</span>
-            <span class="stat-value" id="windDir">مباشر</span>
-          </div>
+      <!-- الصفحة الثانية: الساعات القادمة -->
+      <div id="page-hourly" class="page-section">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">توقعات الساعات القادمة</h3>
+        <div class="hourly-scroll" id="hourlyContainer">
+          <!-- تُعبأ برمجياً -->
         </div>
       </div>
 
-      <!-- بطاقة المساعد الذكي AI -->
-      <div class="ai-assistant-card">
-        <div class="ai-header">
-          <div class="ai-icon-box">
-            <i data-lucide="bot" size="20"></i>
-          </div>
-          <span class="ai-title">المساعد الذكي ينصحك</span>
+      <!-- الصفحة الثالثة: توقعات الأيام -->
+      <div id="page-daily" class="page-section">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">توقعات الأسبوع</h3>
+        <div class="daily-list" id="dailyContainer">
+          <!-- تُعبأ برمجياً -->
         </div>
-        <div class="ai-advice-text" id="aiAdvice">
-          "جاري تحليل حالة الطقس في موقعك الحالي..."
+      </div>
+
+      <!-- الصفحة الرابعة: التحذيرات والطوارئ (Supabase) -->
+      <div id="page-alerts" class="page-section">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">لوحة الإنذارات النشطة</h3>
+        <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- تُعبأ برمجياً من قاعدة البيانات -->
+          <div class="alert-card">
+            <div class="alert-header">
+              <i data-lucide="siren"></i>
+              <span>لا توجد تحذيرات حالية</span>
+            </div>
+            <div class="alert-body">النظام يعمل بشكل سليم ولم يتم رصد أي إنذارات طارئة من قاعدة بيانات Supabase.</div>
+          </div>
         </div>
       </div>
 
     </div>
+
+    <!-- شريط التنقل السفلي -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" onclick="switchPage('home', this)">
+        <i data-lucide="home" size="20"></i>
+        <span>الرئيسية</span>
+      </button>
+      <button class="nav-item" onclick="switchPage('hourly', this)">
+        <i data-lucide="clock" size="20"></i>
+        <span>الساعات</span>
+      </button>
+      <button class="nav-item" onclick="switchPage('daily', this)">
+        <i data-lucide="calendar" size="20"></i>
+        <span>الأسبوع</span>
+      </button>
+      <button class="nav-item" onclick="switchPage('alerts', this)">
+        <i data-lucide="bell" size="20"></i>
+        <span>الإنذارات</span>
+      </button>
+    </nav>
+
   </div>
 
   <script>
@@ -346,124 +456,119 @@
       console.error('Supabase Init Error:', e);
     }
 
-    // طلب الإشعارات من المتصفح وجهاز المستخدم
-    function requestNotificationPermission() {
-      if ("Notification" in window && Notification.permission !== "granted") {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            console.log("تم السماح بالإشعارات بنجاح");
-          }
-        });
-      }
+    // التنقل بين الصفحات
+    function switchPage(pageId, btnElement) {
+      document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+      
+      document.getElementById('page-' + pageId).classList.add('active');
+      btnElement.classList.add('active');
     }
 
-    // جلب موقع المستخدم الجغرافي الحقيقي (GPS)
-    function getLocationAndWeather() {
-      requestNotificationPermission();
-      document.getElementById('cityName').innerText = 'جاري تحديد موقعك...';
-
+    // جلب الموقع والبيانات
+    function initApp() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            fetchWeatherData(lat, lon);
+            fetchWeatherData(position.coords.latitude, position.coords.longitude);
           },
           (error) => {
-            console.warn('تم رفض تحديد الموقع أو حدث خطأ، سيتم استخدام باريس كافتراضي:', error);
-            // إحداثيات باريس، فرنسا كاحتياطي إذا تم رفض الإذن
-            fetchWeatherData(48.8566, 2.3522, 'باريس، فرنسا');
+            fetchWeatherData(48.8566, 2.3522); // باريس افتراضياً
           },
           { timeout: 10000 }
         );
       } else {
-        // احتياطي في حال عدم دعم المتصفح
-        fetchWeatherData(48.8566, 2.3522, 'باريس، فرنسا');
+        fetchWeatherData(48.8566, 2.3522);
       }
+      fetchSupabaseAlerts();
     }
 
-    // جلب الطقس الحقيقي بناء على الإحداثيات
-    async function fetchWeatherData(lat, lon, customCityName = null) {
+    async function fetchWeatherData(lat, lon) {
       try {
-        // إذا لم يتم تمرير اسم مدينة، نقوم بالبحث العكسي البسيط أو تسميتها بناء على الإحداثيات
-        if (!customCityName) {
-          // جلب اسم الموقع الجغرافي باستخدام Nominatim API المجاني
-          try {
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ar`);
-            const geoData = await geoRes.json();
-            const city = geoData.address.city || geoData.address.town || geoData.address.state || 'موقعك الحالي';
-            const country = geoData.address.country || '';
-            document.getElementById('cityName').innerText = `${city}، ${country}`;
-          } catch (e) {
-            document.getElementById('cityName').innerText = 'موقعك الحالي (فرنسا)';
-          }
-        } else {
-          document.getElementById('cityName').innerText = customCityName;
-        }
+        // اسم الموقع
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ar`);
+        const geoData = await geoRes.json();
+        const city = geoData.address.city || geoData.address.town || geoData.address.state || 'موقعك الحالي';
+        const country = geoData.address.country || '';
+        document.getElementById('cityName').innerText = `${city}، ${country}`;
 
-        // جلب الطقس الحقيقي من Open-Meteo بالإحداثيات الفعلية
-        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=auto`);
-        const data = await response.json();
-        
+        // بيانات الطقس الشاملة (الحالي + الساعات + الأيام)
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min,time&timezone=auto`);
+        const data = await res.json();
+
+        // الحالي
         const temp = Math.round(data.current.temperature_2m);
-        const wind = data.current.wind_speed_10m;
-        const humidity = data.current.relative_humidity_2m;
-        
         document.getElementById('tempDegree').innerText = temp + '°';
-        document.getElementById('windSpeed').innerText = wind + ' كم/س';
-        document.getElementById('humidity').innerText = humidity + '%';
+        document.getElementById('windSpeed').innerText = data.current.wind_speed_10m + ' كم/س';
+        document.getElementById('humidity').innerText = data.current.relative_humidity_2m + '%';
+        document.getElementById('weatherState').innerText = temp > 35 ? 'حرارة مرتفعة' : temp < 10 ? 'أجواء باردة' : 'أجواء معتدلة';
+        document.getElementById('aiAdvice').innerText = `الطقس في ${city} (${temp}°م). استمتع بيومك وخذ الحيطة إذا لزم الأمر.`;
 
-        let advice = '';
-        if (temp > 35) {
-          document.getElementById('weatherState').innerText = 'حرارة مرتفعة';
-          advice = `"درجات الحرارة مرتفعة (${temp}°م). احرص على شرب الماء بانتظام."`;
-        } else if (temp < 10) {
-          document.getElementById('weatherState').innerText = 'أجواء باردة';
-          advice = `"الطقس بارد (${temp}°م) في موقعك. ارتدِ معطفاً دافئاً عند الخروج."`;
-        } else {
-          document.getElementById('weatherState').innerText = 'أجواء معتدلة ومنعشة';
-          advice = `"الطقس رائع في فرنسا اليوم (${temp}°م). استمتع بيومك في الهواء الطلق!"`;
+        // الساعات (أول 24 ساعة)
+        const hourlyContainer = document.getElementById('hourlyContainer');
+        hourlyContainer.innerHTML = '';
+        const nowIdx = new Date().getHours();
+        for (let i = nowIdx; i < nowIdx + 24; i++) {
+          if (!data.hourly.temperature_2m[i]) break;
+          const t = Math.round(data.hourly.temperature_2m[i]);
+          const timeStr = `${i % 24}:00`;
+          hourlyContainer.innerHTML += `
+            <div class="hour-card">
+              <span class="hour-time">${timeStr}</span>
+              <i data-lucide="cloud-sun" size="20" style="color: var(--primary-cyan);"></i>
+              <span class="hour-temp">${t}°</span>
+            </div>`;
         }
-        document.getElementById('aiAdvice').innerText = advice;
 
-      } catch (error) {
-        console.error('خطأ في جلب الطقس:', error);
-        document.getElementById('weatherState').innerText = 'تعذر جلب البيانات';
+        // الأيام (أسبوع كامل)
+        const dailyContainer = document.getElementById('dailyContainer');
+        dailyContainer.innerHTML = '';
+        for (let i = 0; i < data.daily.time.length; i++) {
+          const date = new Date(data.daily.time[i]).toLocaleDateString('ar', { weekday: 'long' });
+          const maxT = Math.round(data.daily.temperature_2m_max[i]);
+          const minT = Math.round(data.daily.temperature_2m_min[i]);
+          dailyContainer.innerHTML += `
+            <div class="day-row">
+              <span class="day-name">${date}</span>
+              <div style="display: flex; gap: 10px;">
+                <span class="day-temp">${maxT}° / ${minT}°</span>
+              </div>
+            </div>`;
+        }
+
+        lucide.createIcons();
+      } catch (err) {
+        console.error('خطأ في جلب الطقس:', err);
       }
     }
 
-    // جلب التحذيرات النشطة من Supabase
-    async function fetchAlerts() {
+    // جلب الإنذارات من Supabase وعرضها في صفحة الإنذارات
+    async function fetchSupabaseAlerts() {
       if (!supabaseClient) return;
       try {
         const { data, error } = await supabaseClient
           .from('weather_alerts')
           .select('*')
-          .eq('is_active', true)
-          .limit(1);
+          .eq('is_active', true);
 
+        const container = document.getElementById('alertsListContainer');
         if (data && data.length > 0) {
-          const alert = data[0];
-          document.getElementById('alertBox').style.display = 'block';
-          document.getElementById('alertTitle').innerText = alert.title;
-          document.getElementById('alertText').innerText = alert.message;
-          
-          // إرسال إشعار متصفح حقيقي إذا وافق المستخدم
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(alert.title, { body: alert.message });
-          }
-        } else {
-          document.getElementById('alertBox').style.display = 'none';
+          container.innerHTML = '';
+          data.forEach(alert => {
+            container.innerHTML += `
+              <div class="alert-card">
+                <div class="alert-header">
+                  <i data-lucide="siren"></i>
+                  <span>${alert.title}</span>
+                </div>
+                <div class="alert-body">${alert.message}</div>
+              </div>`;
+          });
         }
+        lucide.createIcons();
       } catch (err) {
-        console.log('خطأ بالتحذيرات:', err);
+        console.log('خطأ في جلب تنبيهات Supabase:', err);
       }
-    }
-
-    function initApp() {
-      getLocationAndWeather();
-      fetchAlerts();
-      lucide.createIcons();
     }
 
     initApp();
