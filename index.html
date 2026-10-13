@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تطبيق الطقس والإنذار الذكي</title>
+  <!-- الخطوط وأيقونات Lucide -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0a0c10 100%);
+      --glass-bg: rgba(22, 27, 34, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --primary-cyan: #00f2fe;
+      --primary-blue: #4facfe;
+      --danger-red: #ff3366;
+      --danger-glow: rgba(255, 51, 102, 0.4);
+      --warning-amber: #ffb703;
+      --text-main: #ffffff;
+      --text-muted: #a0aec0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #080a0f;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      overflow-x: hidden;
+    }
+
+    /* Container الأساسي لشبيه الشاشة الموبايل */
+    .app-container {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-gradient);
+      border-radius: 35px;
+      padding: 24px 20px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 242, 254, 0.15);
+      border: 1px solid var(--glass-border);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+    }
+
+    /* أنوار خلفية متوهجة سينمائية */
+    .glow-sphere-1 {
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(0, 242, 254, 0.3) 0%, transparent 70%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .glow-sphere-2 {
+      position: absolute;
+      bottom: 100px;
+      left: -80px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(255, 51, 102, 0.25) 0%, transparent 70%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .content-wrapper {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* الهيدر العلوي */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .location-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .location-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--glass-border);
+      color: #fff;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* بطاقة التحذير الناررررررية 🚨 */
+    .alert-card {
+      background: linear-gradient(135deg, rgba(255, 51, 102, 0.2) 0%, rgba(20, 10, 20, 0.6) 100%);
+      border: 1px solid var(--danger-red);
+      border-radius: 24px;
+      padding: 16px 18px;
+      box-shadow: 0 10px 25px var(--danger-glow);
+      animation: alertPulse 2.5s infinite ease-in-out;
+      position: relative;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% { box-shadow: 0 0 15px var(--danger-glow); border-color: rgba(255, 51, 102, 0.8); }
+      50% { box-shadow: 0 0 30px rgba(255, 51, 102, 0.8); border-color: #ff3366; }
+    }
+
+    .alert-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--danger-red);
+      font-weight: 800;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+
+    .alert-badge {
+      background: var(--danger-red);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-weight: 900;
+      animation: blink 1.2s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .alert-body {
+      font-size: 0.9rem;
+      color: #ffd6e0;
+      line-height: 1.4;
+    }
+
+    /* بطاقة الطقس الرئيسية ☀️ */
+    .main-weather-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 28px;
+      padding: 25px 20px;
+      text-align: center;
+      position: relative;
+      backdrop-filter: blur(15px);
+    }
+
+    .weather-icon-wrap {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 10px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 0 15px rgba(0, 242, 254, 0.6));
+    }
+
+    .temp-number {
+      font-size: 3.8rem;
+      font-weight: 900;
+      background: linear-gradient(180deg, #ffffff 30%, #a0aec0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .weather-status {
+      font-size: 1.1rem;
+      color: var(--primary-cyan);
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .weather-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    /* بطاقة المساعد الذكي AI 🤖 */
+    .ai-assistant-card {
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(79, 172, 254, 0.05) 100%);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      border-radius: 24px;
+      padding: 18px;
+      position: relative;
+    }
+
+    .ai-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .ai-icon-box {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+    }
+
+    .ai-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--primary-cyan);
+    }
+
+    .ai-advice-text {
+      font-size: 0.92rem;
+      color: #e2e8f0;
+      line-height: 1.5;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 10px 14px;
+      border-radius: 14px;
+      border-right: 3px solid var(--primary-cyan);
+    }
+
+    /* قسم الأزرار التفاعلية لتجربة التصميم 🔥 */
+    .demo-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    .demo-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 16px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-red {
+      background: linear-gradient(135deg, #ff3366, #e60039);
+      box-shadow: 0 4px 15px rgba(255, 51, 102, 0.4);
+    }
+
+    .btn-blue {
+      background: linear-gradient(135deg, #00f2fe, #4facfe);
+      color: #000;
+      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+    }
+
+    .action-btn:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <div class="glow-sphere-1"></div>
+    <div class="glow-sphere-2"></div>
+
+    <div class="content-wrapper">
+
+      <!-- الهيدر -->
+      <div class="header">
+        <div class="location-box">
+          <i data-lucide="map-pin" style="color: var(--primary-cyan);"></i>
+          <span class="location-title">الرياض، السعودية</span>
+        </div>
+        <button class="icon-btn">
+          <i data-lucide="bell"></i>
+        </button>
+      </div>
+
+      <!-- بطاقة التحذير الطارئ 🚨 -->
+      <div class="alert-card" id="alertBox">
+        <div class="alert-header">
+          <i data-lucide="siren"></i>
+          <span>تحذير مناخي طارئ!</span>
+          <span class="alert-badge">عاجل</span>
+        </div>
+        <div class="alert-body" id="alertText">
+          موجة غبار شديدة ورياح عاتية متوقعة خلال الساعة القادمة. انعدام في الرؤية الأفقية.
+        </div>
+      </div>
+
+      <!-- بطاقة الطقس الرئيسية -->
+      <div class="main-weather-card">
+        <div class="weather-icon-wrap" id="weatherIcon">
+          <i data-lucide="cloud-lightning" size="70" style="color: var(--primary-cyan);"></i>
+        </div>
+        <div class="temp-number" id="tempDegree">42°</div>
+        <div class="weather-status" id="weatherState">عاصفة رملية حرارية</div>
+
+        <div class="weather-stats-grid">
+          <div class="stat-item">
+            <i data-lucide="wind" size="18" style="color: var(--primary-cyan);"></i>
+            <span class="stat-label">الرياح</span>
+            <span class="stat-value" id="windSpeed">55 كم/س</span>
+          </div>
+          <div class="stat-item">
+            <i data-lucide="droplets" size="18" style="color: var(--primary-blue);"></i>
+            <span class="stat-label">الرطوبة</span>
+            <span class="stat-value" id="humidity">15%</span>
+          </div>
+          <div class="stat-item">
+            <i data-lucide="eye" size="18" style="color: var(--warning-amber);"></i>
+            <span class="stat-label">الرؤية</span>
+            <span class="stat-value" id="visibility">أقل من 1 كم</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بطاقة المساعد الذكي AI 🤖 -->
+      <div class="ai-assistant-card">
+        <div class="ai-header">
+          <div class="ai-icon-box">
+            <i data-lucide="bot" size="20"></i>
+          </div>
+          <span class="ai-title">المساعد الذكي ينصحك</span>
+        </div>
+        <div class="ai-advice-text" id="aiAdvice">
+          "أنصحك بعدم الخروج إطلاقاً وإغلاق النوافذ أحكاماً، الطقس الحالي يسبب تهيج الجهاز التنفسي بشكل حاد."
+        </div>
+      </div>
+
+      <!-- أزرار لتجربة تغيير الأحداث تفاعلياً 🔥 -->
+      <div class="demo-controls">
+        <span class="demo-title">— أزرار تجربة التفاعل —</span>
+        <div class="btn-group">
+          <button class="action-btn btn-red" onclick="triggerAlertScenario()">
+            <i data-lucide="zap" size="16"></i> محاكاة خطورة
+          </button>
+          <button class="action-btn btn-blue" onclick="triggerNormalScenario()">
+            <i data-lucide="sun" size="16"></i> طقس طبيعي
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // تفعيل الأيقونات
+    lucide.createIcons();
+
+    // وظيفة تجربة سيناريو الخطر والتحذير 🚨
+    function triggerAlertScenario() {
+      document.getElementById('alertBox').style.display = 'block';
+      document.getElementById('alertText').innerText = 'تحذير من زلزال قوي هز المنطقة المجاورة! توخَّ الحذر فوراً.';
+      document.getElementById('tempDegree').innerText = '18°';
+      document.getElementById('weatherState').innerText = 'نشاط زلزالي وعاصفة';
+      document.getElementById('windSpeed').innerText = '80 كم/س';
+      document.getElementById('aiAdvice').innerText = '🚨 "ابتعد عن الأجسام الثقيلة والمباني المرتفعة فوراً! أبتعد عن الزجاج واخرج إلى مكان مفتوح."';
+    }
+
+    // وظيفة تجربة السيناريو الطبيعي ☀️
+    function triggerNormalScenario() {
+      document.getElementById('alertBox').style.display = 'none';
+      document.getElementById('tempDegree').innerText = '26°';
+      document.getElementById('weatherState').innerText = 'مشمس ومشمس لطيف';
+      document.getElementById('windSpeed').innerText = '12 كم/س';
+      document.getElementById('humidity').innerText = '40%';
+      document.getElementById('visibility').innerText = '10 كم';
+      document.getElementById('aiAdvice').innerText = '☀️ "الطقس ممتاز ومثالي للمشي أو ممارسة الرياضة في الهواء الطلق! استمتع بيومك."';
+    }
+  </script>
+</body>
+</html>
