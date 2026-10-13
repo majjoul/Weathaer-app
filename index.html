@@ -67,6 +67,12 @@
     #radarMap { width: 100%; height: 350px; border-radius: 18px; border: 1px solid var(--glass-border); z-index: 1; }
     .leaflet-container { background: #080a0f !important; font-family: 'Tajawal', sans-serif !important; border-radius: 18px; }
 
+    /* تصميم بطاقة منحنى الشروق والغروب مثل التطبيقات الكبرى */
+    .sun-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 16px; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 10px; }
+    .sun-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); }
+    .sun-arc-wrap { position: relative; height: 90px; width: 100%; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+    .sun-svg { width: 100%; height: 75px; overflow: visible; }
+
     .guide-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .guide-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; backdrop-filter: blur(10px); }
     .guide-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(0,242,254,0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-cyan); flex-shrink: 0; }
@@ -156,6 +162,29 @@
           </div>
           <div id="aiAdvice" style="font-size: .88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0,0,0,.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
             جاري تحضير بيانات الطقس...
+          </div>
+        </div>
+
+        <!-- بطاقة منحنى الشمس التفاعلية تحت المساعد الذكي -->
+        <div class="sun-card">
+          <div class="sun-header">
+            <span id="sunriseLabelText" data-i18n="sunriseText">الشروق: --:--</span>
+            <span id="sunsetLabelText" data-i18n="sunsetText">الغروب: --:--</span>
+          </div>
+          <div class="sun-arc-wrap">
+            <svg class="sun-svg" viewBox="0 0 300 100">
+              <!-- خط الأفق -->
+              <line x1="0" y1="70" x2="300" y2="70" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4" stroke-width="2" />
+              <!-- مسار القوس -->
+              <path id="sunPath" d="M 20 70 Q 150 -10 280 70" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3" />
+              <path id="sunProgressPath" d="M 20 70 Q 150 -10 280 70" fill="none" stroke="#ffb703" stroke-width="3" stroke-dasharray="300" stroke-dashoffset="300" />
+              <!-- أيقونة الشمس المتحركة -->
+              <circle id="sunNode" cx="20" cy="70" r="7" fill="#ffb703" stroke="#fff" stroke-width="2" />
+            </svg>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 0.9rem; color: #fff; direction: ltr;">
+            <span id="valSunrise">--:--</span>
+            <span id="valSunset">--:--</span>
           </div>
         </div>
       </div>
@@ -258,6 +287,8 @@
         humidity: "الرطوبة",
         status: "الحالة",
         aiAssistant: "المساعد الذكي",
+        sunriseText: "الشروق",
+        sunsetText: "الغروب",
         hourlyTitle: "توقعات الساعات القادمة",
         chartTitle: "📈 منحنى تغير درجات الحرارة",
         radarTitle: "🛰️ رادار العواصف والأمطار الحي",
@@ -289,6 +320,8 @@
         humidity: "Humidity",
         status: "Status",
         aiAssistant: "AI Assistant",
+        sunriseText: "Sunrise",
+        sunsetText: "Sunset",
         hourlyTitle: "Hourly Forecast",
         chartTitle: "📈 Temperature Trend Graph",
         radarTitle: "🛰️ Live Storm & Rain Radar",
@@ -320,6 +353,8 @@
         humidity: "Humidité",
         status: "Condition",
         aiAssistant: "Assistant IA",
+        sunriseText: "Lever de soleil",
+        sunsetText: "Coucher de soleil",
         hourlyTitle: "Prévisions Horaires",
         chartTitle: "📈 Graphique de Température",
         radarTitle: "🛰️ Radar Tempête & Pluie en Direct",
@@ -415,6 +450,7 @@
     let notifiedSunriseToday = false;
     let notifiedSunsetToday = false;
 
+    // دالة لتحديث لون الخلفية تدريجياً حسب الوقت الحقيقي (صباح، مغرب، ليل، ظهر)
     function applyDynamicTheme(temp, code, isDay, sunriseStr, sunsetStr) {
       const container = document.getElementById('appContainer');
       let appGradient = '';
@@ -422,39 +458,48 @@
       let primaryCyan = '#00f2fe';
 
       const now = new Date();
-      const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
+      const currentTimeVal = currentHour * 60 + currentMin;
 
-      // حفظ أوقات الشروق والغروب للمراقبة الحية
+      const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+
       if (sunriseStr) globalSunrise = sunriseStr.slice(0, 5);
       if (sunsetStr) globalSunset = sunsetStr.slice(0, 5);
 
-      // فحص أوقات التنبيه اللحظي للشروق والغروب
       checkSunAlerts(currentTimeStr);
 
-      const isSunsetTime = sunsetStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunsetStr.slice(0,2))) <= 1;
-      const isSunriseTime = sunriseStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunriseStr.slice(0,2))) <= 1;
+      // حساب دقائق الشروق والغروب للمقارنة الدقيقة
+      let sunriseVal = 6 * 60; // افتراضي 06:00
+      let sunsetVal = 18 * 60; // افتراضي 18:00
 
-      if (code >= 51 && code <= 67) {
-        appGradient = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)';
-        bodyColor = '#090d16';
-        primaryCyan = '#38bdf8';
-      } else if (isSunsetTime || isSunriseTime) {
-        appGradient = 'linear-gradient(135deg, #3d220b 0%, #4a2e10 50%, #1f1105 100%)';
+      if (sunriseStr) {
+        const parts = sunriseStr.slice(11, 16).split(':');
+        sunriseVal = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      }
+      if (sunsetStr) {
+        const parts = sunsetStr.slice(11, 16).split(':');
+        sunsetVal = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      }
+
+      // تحديد تدرج الخلفية المناسب للوقت تماماً
+      if (!isDay && (currentTimeVal < sunriseVal || currentTimeVal > sunsetVal + 60)) {
+        // وقت الليل الدامس (أسود داكن)
+        appGradient = 'linear-gradient(135deg, #080a0f 0%, #0d1117 50%, #040507 100%)';
+        bodyColor = '#030406';
+        primaryCyan = '#818cf8';
+      } else if (Math.abs(currentTimeVal - sunsetVal) <= 60 || Math.abs(currentTimeVal - sunriseVal) <= 60) {
+        // وقت الغروب أو الشروق (ألوان برتقالية ودافئة)
+        appGradient = 'linear-gradient(135deg, #3d220b 0%, #522b10 50%, #1f1105 100%)';
         bodyColor = '#140b03';
         primaryCyan = '#ffb703';
-      } else if (temp >= 30 && isDay) {
-        appGradient = 'linear-gradient(135deg, #3a1510 0%, #4d1d16 50%, #240a07 100%)';
-        bodyColor = '#1a0806';
-        primaryCyan = '#ff7830';
-      } else if (temp <= 15) {
-        appGradient = 'linear-gradient(135deg, #0c2340 0%, #1a3a5c 50%, #081726 100%)';
-        bodyColor = '#05101a';
-        primaryCyan = '#7dd3fc';
-      } else if (!isDay) {
-        appGradient = 'linear-gradient(135deg, #120d1d 0%, #1e172e 50%, #0a0712 100%)';
-        bodyColor = '#050308';
-        primaryCyan = '#c084fc';
+      } else if (currentHour >= 6 && currentHour < 12) {
+        // وقت الصباح (إضاءة ساطعة ومنعشة)
+        appGradient = 'linear-gradient(135deg, #0c2b36 0%, #164e63 50%, #081b22 100%)';
+        bodyColor = '#051116';
+        primaryCyan = '#38bdf8';
       } else {
+        // وقت النهار/الظهر
         appGradient = 'linear-gradient(135deg, #0a1f24 0%, #132e35 50%, #061317 100%)';
         bodyColor = '#040d10';
         primaryCyan = '#00f2fe';
@@ -463,6 +508,39 @@
       container.style.background = appGradient;
       document.body.style.background = bodyColor;
       document.documentElement.style.setProperty('--primary-cyan', primaryCyan);
+
+      // تحديث حركة الشمس على القوس
+      updateSunArc(sunriseVal, sunsetVal, currentTimeVal);
+    }
+
+    // تحديث مسار الشمس وموقع الأيقونة على القوس البياني
+    function updateSunArc(sunriseVal, sunsetVal, currentVal) {
+      const sunNode = document.getElementById('sunNode');
+      const sunProgressPath = document.getElementById('sunProgressPath');
+      const valSunrise = document.getElementById('valSunrise');
+      const valSunset = document.getElementById('valSunset');
+
+      if (globalSunrise) valSunrise.innerText = globalSunrise;
+      if (globalSunset) valSunset.innerText = globalSunset;
+
+      // حساب نسبة تقدم الشمس بين الشروق والغروب (من 0 إلى 1)
+      let progress = (currentVal - sunriseVal) / (sunsetVal - sunriseVal);
+      if (progress < 0) progress = 0;
+      if (progress > 1) progress = 1;
+
+      // إحداثيات تقريبية لمسار SVG (من x=20 إلى x=280)
+      const x = 20 + progress * 260;
+      // معادلة القوس البياني
+      const y = 70 - Math.sin(progress * Math.PI) * 75;
+
+      if (sunNode) {
+        sunNode.setAttribute('cx', x);
+        sunNode.setAttribute('cy', y < -5 ? -5 : y);
+      }
+      if (sunProgressPath) {
+        const dashOffset = 300 - (progress * 300);
+        sunProgressPath.style.strokeDashoffset = dashOffset;
+      }
     }
 
     function checkSunAlerts(currentTimeStr) {
@@ -520,7 +598,9 @@
     }
 
     let radarMapInstance = null;
-    function initRadarMap(lat, lon) {
+    let currentRadarMarker = null;
+
+    function initRadarMap(lat, lon, initialTemp) {
       const mapContainer = document.getElementById('radarMap');
       if (!mapContainer) return;
 
@@ -528,7 +608,7 @@
         radarMapInstance.remove();
       }
 
-      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
+      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 9);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
@@ -539,7 +619,39 @@
         maxZoom: 19
       }).addTo(radarMapInstance);
 
-      L.marker([lat, lon]).addTo(radarMapInstance);
+      updateRadarMarker(lat, lon, initialTemp, currentLang === 'ar' ? 'موقعك الحالي' : 'Current Location');
+
+      radarMapInstance.on('click', async function(e) {
+        const clickedLat = e.latlng.lat;
+        const clickedLon = e.latlng.lng;
+        
+        try {
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${clickedLat}&longitude=${clickedLon}&current=temperature_2m&timezone=auto`);
+          const data = await res.json();
+          if (data && data.current) {
+            const clickedTemp = Math.round(data.current.temperature_2m);
+            updateRadarMarker(clickedLat, clickedLon, clickedTemp, `${clickedLat.toFixed(2)}°, ${clickedLon.toFixed(2)}°`);
+          }
+        } catch (err) {
+          console.error('خطأ في جلب بيانات النقطة:', err);
+        }
+      });
+    }
+
+    function updateRadarMarker(lat, lon, temp, label) {
+      if (currentRadarMarker) {
+        radarMapInstance.removeLayer(currentRadarMarker);
+      }
+
+      const tempIcon = L.divIcon({
+        className: 'custom-radar-badge',
+        html: `<div style="background: rgba(13, 17, 23, 0.95); border: 2px solid var(--primary-cyan); color: #fff; padding: 6px 12px; border-radius: 14px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(0,0,0,0.6); font-family: 'Tajawal', sans-serif; white-space: nowrap;">📍 ${temp}°C (${label})</div>`,
+        iconSize: [130, 35],
+        iconAnchor: [65, 40]
+      });
+
+      currentRadarMarker = L.marker([lat, lon], { icon: tempIcon }).addTo(radarMapInstance);
+      radarMapInstance.panTo([lat, lon]);
     }
 
     function escapeHTML(s) {
@@ -619,7 +731,7 @@
         const todaySunset = data.daily?.sunset?.[0] ? data.daily.sunset[0].slice(11, 16) : null;
 
         applyDynamicTheme(temp, code, isDay, todaySunrise, todaySunset);
-        initRadarMap(lat, lon);
+        initRadarMap(lat, lon, temp);
         
         const info = skyInfo(code, data.current.cloud_cover, isDay);
 
@@ -749,7 +861,6 @@
     lucide.createIcons();
     initApp();
 
-    // فحص دوري كل دقيقة للتحقق من أوقات الشروق والغروب
     setInterval(() => {
       const now = new Date();
       const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
