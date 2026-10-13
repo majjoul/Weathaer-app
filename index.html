@@ -8,8 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- مكتبات الأيقونات والـ Supabase والـ Chart.js -->
   <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root {
@@ -153,10 +156,17 @@
         </div>
       </div>
 
-      <!-- الساعات -->
+      <!-- الساعات مع الرسم البياني -->
       <div id="page-hourly" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="hourlyTitle">توقعات الساعات القادمة</h3>
         <div class="hourly-scroll" id="hourlyContainer"></div>
+
+        <div class="main-weather-card" style="margin-top: 10px; padding: 16px;">
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-cyan); text-align: start;" data-i18n="chartTitle">📈 منحنى تغير درجات الحرارة</h4>
+          <div style="position: relative; width: 100%; height: 200px;">
+            <canvas id="tempChart"></canvas>
+          </div>
+        </div>
       </div>
 
       <!-- الأيام -->
@@ -237,6 +247,7 @@
         status: "الحالة",
         aiAssistant: "المساعد الذكي",
         hourlyTitle: "توقعات الساعات القادمة",
+        chartTitle: "📈 منحنى تغير درجات الحرارة",
         dailyTitle: "توقعات الأسبوع",
         alertsTitle: "لوحة الإنذارات النشطة",
         guideTitle: "📖 دليل استخدام التطبيق",
@@ -261,6 +272,7 @@
         status: "Status",
         aiAssistant: "AI Assistant",
         hourlyTitle: "Hourly Forecast",
+        chartTitle: "📈 Temperature Trend Graph",
         dailyTitle: "Weekly Forecast",
         alertsTitle: "Active Alerts Dashboard",
         guideTitle: "📖 App User Guide",
@@ -285,6 +297,7 @@
         status: "Condition",
         aiAssistant: "Assistant IA",
         hourlyTitle: "Prévisions Horaires",
+        chartTitle: "📈 Graphique de Température",
         dailyTitle: "Prévisions Semainières",
         alertsTitle: "Tableau des Alertes Actives",
         guideTitle: "📖 Guide d'Utilisation",
@@ -338,7 +351,6 @@
     }
     registerServiceWorkerAndPush();
 
-    // فحص وإرسال الإشعارات التلقائية (منتصف النهار والشروق والغروب)
     function checkAndSendWeatherNotification(temp, isDay) {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
@@ -353,10 +365,10 @@
       let msg = '';
 
       if (hours >= 11 && hours <= 14) {
-        if (temp >= 33) {
+        if (temp >= 30) {
           title = currentLang === 'ar' ? '☀️ تنبيه منتصف النهار' : currentLang === 'fr' ? '☀️ Alerte de Milieu de Journée' : '☀️ Midday Weather Alert';
           msg = currentLang === 'ar' ? `درجة الحرارة مرتفعة الآن (${temp}°م). يُنصح بشرب الماء والابتعاد عن الشمس.` : currentLang === 'fr' ? `La température est élevée (${temp}°C). Buvez de l'eau et restez à l'ombre.` : `High temperature right now (${temp}°C). Stay hydrated and stay in shade.`;
-        } else if (temp <= 12) {
+        } else if (temp <= 15) {
           title = currentLang === 'ar' ? '❄️ تنبيه الأجواء الباردة' : currentLang === 'fr' ? '❄️ Alerte Temps Froid' : '❄️ Cold Weather Warning';
           msg = currentLang === 'ar' ? `الطقس بارد الآن (${temp}°م). احرص على ارتداء ملابس دافئة.` : currentLang === 'fr' ? `Le temps est froid (${temp}°C). Portez des vêtements chauds.` : `It is cold now (${temp}°C). Make sure to wear warm clothing.`;
         }
@@ -404,24 +416,100 @@
       return { t: currentLang === 'ar' ? 'غائم' : currentLang === 'fr' ? 'Nuageux' : 'Cloudy', i: 'cloud' };
     }
 
+    // دالة الألوان الديناميكية الشاملة للتطبيق والـ Body
     function applyDynamicTheme(temp, code, isDay) {
       const container = document.getElementById('appContainer');
-      let gradient = 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0a0c10 100%)';
+      let appGradient = '';
+      let bodyColor = '';
+      let primaryCyan = '#00f2fe';
 
       if (code >= 51 && code <= 67) {
-        gradient = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #090d16 100%)';
-        document.documentElement.style.setProperty('--primary-cyan', '#38bdf8');
-      } else if (temp >= 33) {
-        gradient = 'linear-gradient(135deg, #2b110e 0%, #3d1a14 50%, #1a0806 100%)';
-        document.documentElement.style.setProperty('--primary-cyan', '#ff7830');
+        appGradient = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)';
+        bodyColor = '#090d16';
+        primaryCyan = '#38bdf8';
+      } else if (temp >= 30) {
+        appGradient = 'linear-gradient(135deg, #3a1510 0%, #4d1d16 50%, #240a07 100%)';
+        bodyColor = '#1a0806';
+        primaryCyan = '#ff7830';
+      } else if (temp <= 15) {
+        appGradient = 'linear-gradient(135deg, #0c2340 0%, #1a3a5c 50%, #081726 100%)';
+        bodyColor = '#05101a';
+        primaryCyan = '#7dd3fc';
       } else if (!isDay) {
-        gradient = 'linear-gradient(135deg, #09090b 0%, #18181b 50%, #030304 100%)';
-        document.documentElement.style.setProperty('--primary-cyan', '#a78bfa');
+        appGradient = 'linear-gradient(135deg, #120d1d 0%, #1e172e 50%, #0a0712 100%)';
+        bodyColor = '#050308';
+        primaryCyan = '#c084fc';
       } else {
-        gradient = 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0a0c10 100%)';
-        document.documentElement.style.setProperty('--primary-cyan', '#00f2fe');
+        appGradient = 'linear-gradient(135deg, #0a1f24 0%, #132e35 50%, #061317 100%)';
+        bodyColor = '#040d10';
+        primaryCyan = '#00f2fe';
       }
-      container.style.background = gradient;
+
+      container.style.background = appGradient;
+      document.body.style.background = bodyColor;
+      document.documentElement.style.setProperty('--primary-cyan', primaryCyan);
+    }
+
+    let tempChartInstance = null;
+
+    function renderTempChart(labels, temps) {
+      const ctx = document.getElementById('tempChart');
+      if (!ctx) return;
+
+      if (tempChartInstance) {
+        tempChartInstance.destroy();
+      }
+
+      const primaryCyan = getComputedStyle(document.documentElement).getPropertyValue('--primary-cyan').trim() || '#00f2fe';
+
+      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 180);
+      gradient.addColorStop(0, primaryCyan + '55');
+      gradient.addColorStop(1, primaryCyan + '00');
+
+      tempChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '°C',
+            data: temps,
+            borderColor: primaryCyan,
+            borderWidth: 3,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: primaryCyan,
+            pointRadius: 4,
+            fill: true,
+            backgroundColor: gradient,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(22, 27, 34, 0.85)',
+              titleFont: { family: 'Tajawal', size: 12 },
+              bodyFont: { family: 'Tajawal', size: 13, weight: 'bold' },
+              displayColors: false,
+              callbacks: {
+                label: (context) => `${context.parsed.y}°C`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#a0aec0', font: { family: 'Tajawal', size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.08)' },
+              ticks: { color: '#a0aec0', font: { family: 'Tajawal', size: 10 } }
+            }
+          }
+        }
+      });
     }
 
     function escapeHTML(s) {
@@ -498,8 +586,8 @@
           `<i data-lucide="${info.i}" style="width:65px;height:65px;color: var(--primary-cyan);"></i>`;
 
         let tip = currentLang === 'ar' ? `الطقس الحالي بمعدل ${temp}°م. ` : currentLang === 'fr' ? `Température actuelle de ${temp}°C. ` : `Current temperature is ${temp}°C. `;
-        if (temp >= 35) tip += currentLang === 'ar' ? 'الجو حار، اشرب ماء بكثرة.' : currentLang === 'fr' ? 'Il fait chaud, buvez beaucoup d\'eau.' : 'It is hot, drink plenty of water.';
-        else if (temp <= 10) tip += currentLang === 'ar' ? 'الجو بارد، ارتدِ ملابس ثقيلة.' : currentLang === 'fr' ? 'Il fait froid, habillez-vous chaudement.' : 'It is cold, wear warm clothes.';
+        if (temp >= 30) tip += currentLang === 'ar' ? 'الجو حار، اشرب ماء بكثرة.' : currentLang === 'fr' ? 'Il fait chaud, buvez beaucoup d\'eau.' : 'It is hot, drink plenty of water.';
+        else if (temp <= 15) tip += currentLang === 'ar' ? 'الجو بارد، ارتدِ ملابس ثقيلة.' : currentLang === 'fr' ? 'Il fait froid, habillez-vous chaudement.' : 'It is cold, wear warm clothes.';
         else tip += currentLang === 'ar' ? 'أجواء معتدلة، استمتع بيومك!' : currentLang === 'fr' ? 'Météo agréable, profitez de votre journée!' : 'Mild weather, enjoy your day!';
         document.getElementById('aiAdvice').innerText = tip;
 
@@ -508,10 +596,18 @@
         const nowKey = (data.current.time || '').slice(0, 13);
         let start = data.hourly.time.findIndex(t => t.startsWith(nowKey));
         if (start < 0) start = 0;
+
+        const chartLabels = [];
+        const chartTemps = [];
+
         for (let i = start; i < Math.min(start + 24, data.hourly.time.length); i++) {
           const t = Math.round(data.hourly.temperature_2m[i]);
           const hh = data.hourly.time[i].slice(11, 16);
           const hi = wInfo(data.hourly.weather_code[i]);
+
+          chartLabels.push(hh);
+          chartTemps.push(t);
+
           hourlyContainer.innerHTML += `
             <div class="hour-card">
               <span class="hour-time">${hh}</span>
@@ -519,6 +615,8 @@
               <span class="hour-temp">${t}°</span>
             </div>`;
         }
+
+        renderTempChart(chartLabels, chartTemps);
 
         const dailyContainer = document.getElementById('dailyContainer');
         dailyContainer.innerHTML = '';
