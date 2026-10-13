@@ -210,6 +210,14 @@
       return WEATHER_CODES[code] || { t: 'غير معروف', i: 'cloud' };
     }
 
+    // الحالة الحالية حسب نسبة الغيوم الفعلية + نهار/ليل
+    function skyInfo(code, cloud, isDay) {
+      if (code > 3 || cloud == null) return wInfo(code);
+      if (cloud < 25) return { t: isDay ? 'مشمس' : 'صافي', i: isDay ? 'sun' : 'moon' };
+      if (cloud < 60) return { t: 'غائم جزئياً', i: isDay ? 'cloud-sun' : 'cloud-moon' };
+      return { t: 'غائم', i: 'cloud' };
+    }
+
     function escapeHTML(s) {
       return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
     }
@@ -256,7 +264,7 @@
         // ✅ الإصلاح: حذفنا "time" من daily (يرجع تلقائياً) وأضفنا weather_code
         const url = 'https://api.open-meteo.com/v1/forecast'
           + `?latitude=${lat}&longitude=${lon}`
-          + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code'
+          + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,cloud_cover,is_day'
           + '&hourly=temperature_2m,weather_code'
           + '&daily=temperature_2m_max,temperature_2m_min,weather_code'
           + '&timezone=auto';
@@ -269,7 +277,7 @@
         const temp = Math.round(data.current.temperature_2m);
         const wind = data.current.wind_speed_10m;
         const hum = data.current.relative_humidity_2m;
-        const info = wInfo(data.current.weather_code);
+        const info = skyInfo(data.current.weather_code, data.current.cloud_cover, data.current.is_day);
 
         document.getElementById('tempDegree').innerText = temp + '°';
         document.getElementById('windSpeed').innerText = wind + ' كم/س';
