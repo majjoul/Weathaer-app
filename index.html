@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
   
-  <!-- مكتبات الأيقونات والـ Supabase والـ Chart.js -->
   <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -63,7 +62,6 @@
     .day-name { font-weight: 700; font-size: .95rem; }
     .day-temp { font-weight: 700; color: var(--primary-cyan); direction: ltr; }
     
-    /* الدليل التفاعلي */
     .guide-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .guide-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; backdrop-filter: blur(10px); }
     .guide-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(0,242,254,0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-cyan); flex-shrink: 0; }
@@ -351,42 +349,6 @@
     }
     registerServiceWorkerAndPush();
 
-    function checkAndSendWeatherNotification(temp, isDay) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-
-      const now = new Date();
-      const hours = now.getHours();
-      const todayKey = now.toISOString().slice(0, 10);
-      const lastPush = localStorage.getItem('last_weather_push_date');
-
-      if (lastPush === todayKey) return;
-
-      let title = '';
-      let msg = '';
-
-      if (hours >= 11 && hours <= 14) {
-        if (temp >= 30) {
-          title = currentLang === 'ar' ? '☀️ تنبيه منتصف النهار' : currentLang === 'fr' ? '☀️ Alerte de Milieu de Journée' : '☀️ Midday Weather Alert';
-          msg = currentLang === 'ar' ? `درجة الحرارة مرتفعة الآن (${temp}°م). يُنصح بشرب الماء والابتعاد عن الشمس.` : currentLang === 'fr' ? `La température est élevée (${temp}°C). Buvez de l'eau et restez à l'ombre.` : `High temperature right now (${temp}°C). Stay hydrated and stay in shade.`;
-        } else if (temp <= 15) {
-          title = currentLang === 'ar' ? '❄️ تنبيه الأجواء الباردة' : currentLang === 'fr' ? '❄️ Alerte Temps Froid' : '❄️ Cold Weather Warning';
-          msg = currentLang === 'ar' ? `الطقس بارد الآن (${temp}°م). احرص على ارتداء ملابس دافئة.` : currentLang === 'fr' ? `Le temps est froid (${temp}°C). Portez des vêtements chauds.` : `It is cold now (${temp}°C). Make sure to wear warm clothing.`;
-        }
-      }
-
-      if (title && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(reg => {
-          reg.showNotification(title, {
-            body: msg,
-            dir: currentLang === 'ar' ? 'rtl' : 'ltr',
-            lang: currentLang,
-            vibrate: [200, 100, 200]
-          });
-          localStorage.setItem('last_weather_push_date', todayKey);
-        });
-      }
-    }
-
     const WEATHER_CODES = {
       0:  { ar: 'صافي', en: 'Clear', fr: 'Dégagé', i: 'sun' },
       1:  { ar: 'غالباً صافي', en: 'Mostly Clear', fr: 'Majoritairement Dégagé', i: 'sun' },
@@ -416,18 +378,30 @@
       return { t: currentLang === 'ar' ? 'غائم' : currentLang === 'fr' ? 'Nuageux' : 'Cloudy', i: 'cloud' };
     }
 
-    // دالة الألوان الديناميكية الشاملة للتطبيق والـ Body
-    function applyDynamicTheme(temp, code, isDay) {
+    // دالة الألوان الديناميكية الحقيقية مع أوقات الشروق والغروب الفعلية لكل فصل
+    function applyDynamicTheme(temp, code, isDay, sunriseStr, sunsetStr) {
       const container = document.getElementById('appContainer');
       let appGradient = '';
       let bodyColor = '';
       let primaryCyan = '#00f2fe';
 
+      const now = new Date();
+      const currentTimeStr = now.toTimeString().slice(0, 5); // HH:MM
+
+      // مقارنة الوقت الحالي بأوقات الشروق والغروب الفعلية المستلمة من الـ API
+      const isSunsetTime = sunsetStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunsetStr.slice(0,2))) <= 1;
+      const isSunriseTime = sunriseStr && Math.abs(parseInt(currentTimeStr.slice(0,2)) - parseInt(sunriseStr.slice(0,2))) <= 1;
+
       if (code >= 51 && code <= 67) {
         appGradient = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)';
         bodyColor = '#090d16';
         primaryCyan = '#38bdf8';
-      } else if (temp >= 30) {
+      } else if (isSunsetTime || isSunriseTime) {
+        // وقت الشروق والغروب الفعلي (برتقالي مصفر دافئ في أي فصل)
+        appGradient = 'linear-gradient(135deg, #3d220b 0%, #4a2e10 50%, #1f1105 100%)';
+        bodyColor = '#140b03';
+        primaryCyan = '#ffb703';
+      } else if (temp >= 30 && isDay) {
         appGradient = 'linear-gradient(135deg, #3a1510 0%, #4d1d16 50%, #240a07 100%)';
         bodyColor = '#1a0806';
         primaryCyan = '#ff7830';
@@ -554,11 +528,12 @@
       try {
         document.getElementById('cityName').innerText = locationLabel;
 
+        // جلب بيانات الطقس متضمنة أوقات الشروق والغروب الفعلية في اليوم (sunrise & sunset)
         const url = 'https://api.open-meteo.com/v1/forecast'
           + `?latitude=${lat}&longitude=${lon}`
           + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,cloud_cover,is_day'
           + '&hourly=temperature_2m,weather_code'
-          + '&daily=temperature_2m_max,temperature_2m_min,weather_code'
+          + '&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset'
           + '&timezone=auto';
 
         const res = await fetch(url);
@@ -572,8 +547,11 @@
         const code = data.current.weather_code;
         const isDay = data.current.is_day;
         
-        applyDynamicTheme(temp, code, isDay);
-        checkAndSendWeatherNotification(temp, isDay);
+        // استخراج أقتات الشروق والغروب الفعلية لليوم الحالي
+        const todaySunrise = data.daily?.sunrise?.[0] ? data.daily.sunrise[0].slice(11, 16) : null;
+        const todaySunset = data.daily?.sunset?.[0] ? data.daily.sunset[0].slice(11, 16) : null;
+
+        applyDynamicTheme(temp, code, isDay, todaySunrise, todaySunset);
         
         const info = skyInfo(code, data.current.cloud_cover, isDay);
 
