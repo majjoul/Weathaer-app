@@ -173,7 +173,7 @@
         </div>
       </div>
 
-      <!-- صفحة خريطة الرادار التفاعلية المستقلة -->
+      <!-- صفحة خريطة الرادار المستقلة -->
       <div id="page-radar" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;" data-i18n="radarTitle">🛰️ رادار العواصف والأمطار الحي</h3>
         <div class="main-weather-card" style="padding: 12px;">
@@ -482,9 +482,7 @@
     }
 
     let radarMapInstance = null;
-    let currentRadarMarker = null;
-
-    function initRadarMap(lat, lon, initialTemp) {
+    function initRadarMap(lat, lon) {
       const mapContainer = document.getElementById('radarMap');
       if (!mapContainer) return;
 
@@ -492,52 +490,20 @@
         radarMapInstance.remove();
       }
 
-      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 9);
+      radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
 
+      // خريطة مجانية 100% بدون أي مفاتيح API وبألوان داكنة تتناسب مع التصميم
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
       }).addTo(radarMapInstance);
 
+      // طبقة رادار الطقس الحية المجانية
       L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
         opacity: 0.65,
         maxZoom: 19
       }).addTo(radarMapInstance);
 
-      // وضع المؤشر الأولي على موقعك
-      updateRadarMarker(lat, lon, initialTemp, currentLang === 'ar' ? 'موقعك الحالي' : 'Current Location');
-
-      // تفاعل النقر في أي مكان في العالم لجلب درجة الحرارة فورا (مثل بنزرت أو أي مدينة)
-      radarMapInstance.on('click', async function(e) {
-        const clickedLat = e.latlng.lat;
-        const clickedLon = e.latlng.lng;
-        
-        try {
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${clickedLat}&longitude=${clickedLon}&current=temperature_2m&timezone=auto`);
-          const data = await res.json();
-          if (data && data.current) {
-            const clickedTemp = Math.round(data.current.temperature_2m);
-            updateRadarMarker(clickedLat, clickedLon, clickedTemp, `${clickedLat.toFixed(2)}°, ${clickedLon.toFixed(2)}°`);
-          }
-        } catch (err) {
-          console.error('خطأ في جلب بيانات النقطة:', err);
-        }
-      });
-    }
-
-    function updateRadarMarker(lat, lon, temp, label) {
-      if (currentRadarMarker) {
-        radarMapInstance.removeLayer(currentRadarMarker);
-      }
-
-      const tempIcon = L.divIcon({
-        className: 'custom-radar-badge',
-        html: `<div style="background: rgba(13, 17, 23, 0.95); border: 2px solid var(--primary-cyan); color: #fff; padding: 6px 12px; border-radius: 14px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(0,0,0,0.6); font-family: 'Tajawal', sans-serif; white-space: nowrap;">📍 ${temp}°C (${label})</div>`,
-        iconSize: [130, 35],
-        iconAnchor: [65, 40]
-      });
-
-      currentRadarMarker = L.marker([lat, lon], { icon: tempIcon }).addTo(radarMapInstance);
-      radarMapInstance.panTo([lat, lon]);
+      L.marker([lat, lon]).addTo(radarMapInstance);
     }
 
     function escapeHTML(s) {
@@ -548,6 +514,7 @@
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
       
+      // إزالة التحديد عن الأزرار العلوية إن وجدت
       document.getElementById('radarBtn').style.borderColor = 'var(--glass-border)';
 
       if (pageId === 'radar') {
@@ -617,7 +584,7 @@
         const todaySunset = data.daily?.sunset?.[0] ? data.daily.sunset[0].slice(11, 16) : null;
 
         applyDynamicTheme(temp, code, isDay, todaySunrise, todaySunset);
-        initRadarMap(lat, lon, temp);
+        initRadarMap(lat, lon);
         
         const info = skyInfo(code, data.current.cloud_cover, isDay);
 
@@ -717,7 +684,7 @@
 
       if (!supabaseClient) { container.innerHTML = emptyHTML; lucide.createIcons(); return; }
       try {
-        The { data, error } = await supabaseClient
+        const { data, error } = await supabaseClient
           .from('weather_alerts')
           .select('*')
           .eq('is_active', true);
