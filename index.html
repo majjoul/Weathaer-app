@@ -68,7 +68,6 @@
     .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-size: .7rem; font-weight: 600; transition: all .2s ease; }
     .nav-item.active { color: var(--primary-cyan); }
 
-    /* ===== بانر الإنذار العاجل ===== */
     .alert-banner { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 50; background: linear-gradient(135deg, #ff3366, #b3123a); border-radius: 18px; padding: 14px 16px; box-shadow: 0 10px 30px var(--danger-glow); transform: translateY(-140%); transition: transform .4s ease; cursor: pointer; }
     .alert-banner.show { transform: translateY(0); animation: shake .5s ease 2; }
     .alert-banner .ab-title { font-weight: 900; font-size: 1rem; margin-bottom: 4px; }
@@ -76,7 +75,7 @@
     @keyframes shake { 0%,100% { margin-left: 0; } 25% { margin-left: -6px; } 75% { margin-left: 6px; } }
     .bell-badge { position: relative; }
     .bell-badge.has-alert::after { content: ''; position: absolute; top: -2px; right: 8px; width: 9px; height: 9px; background: var(--danger-red); border-radius: 50%; box-shadow: 0 0 8px var(--danger-red); }
-    .test-btn { background: rgba(255,183,3,.12); border: 1px dashed var(--warning-amber); color: var(--warning-amber); border-radius: 14px; padding: 12px; font-weight: 700; font-size: .9rem; cursor: pointer; }
+    .test-btn { background: rgba(255,183,3,.12); border: 1px dashed var(--warning-amber); color: var(--warning-amber); border-radius: 14px; padding: 12px; font-weight: 700; font-size: .9rem; cursor: pointer; width: 100%; margin-top: 5px; }
     .test-btn.clear { background: rgba(255,255,255,.06); border-color: var(--glass-border); color: var(--text-muted); }
   </style>
 </head>
@@ -192,7 +191,24 @@
       console.error('Supabase Init Error:', e);
     }
 
-    // ===== أكواد حالة الطقس (WMO) =====
+    // تسجيل الـ Service Worker وتفعيل اشتراك Push Notifications
+    async function registerServiceWorkerAndPush() {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          const registration = await navigator.serviceWorker.register('sw.js');
+          console.log('تم تسجيل الـ Service Worker بنجاح:', registration);
+          
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            console.log('تم السماح بالإشعارات بنجاح.');
+          }
+        } catch (e) {
+          console.warn('فشل تسجيل الـ Service Worker:', e);
+        }
+      }
+    }
+    registerServiceWorkerAndPush();
+
     const WEATHER_CODES = {
       0:  { t: 'صافي',             i: 'sun' },
       1:  { t: 'غالباً صافي',       i: 'sun' },
@@ -227,7 +243,6 @@
       return WEATHER_CODES[code] || { t: 'غير معروف', i: 'cloud' };
     }
 
-    // الحالة الحالية حسب نسبة الغيوم الفعلية + نهار/ليل
     function skyInfo(code, cloud, isDay) {
       if (code > 3 || cloud == null) return wInfo(code);
       if (cloud < 25) return { t: isDay ? 'مشمس' : 'صافي', i: isDay ? 'sun' : 'moon' };
@@ -262,14 +277,13 @@
             done();
           },
           async () => {
-            console.warn('Geolocation denied or failed, using default.');
-            await fetchWeatherData(48.8566, 2.3522, 'الموقع الافتراضي (باريس)');
+            await fetchWeatherData(43.7102, 7.2620, 'Nice, France');
             done();
           },
           { timeout: 7000, enableHighAccuracy: false }
         );
       } else {
-        fetchWeatherData(48.8566, 2.3522, 'الموقع الافتراضي (باريس)').then(done);
+        fetchWeatherData(43.7102, 7.2620, 'Nice, France').then(done);
       }
       fetchSupabaseAlerts();
     }
@@ -278,7 +292,6 @@
       try {
         document.getElementById('cityName').innerText = locationLabel;
 
-        // ✅ الإصلاح: حذفنا "time" من daily (يرجع تلقائياً) وأضفنا weather_code
         const url = 'https://api.open-meteo.com/v1/forecast'
           + `?latitude=${lat}&longitude=${lon}`
           + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,cloud_cover,is_day'
@@ -304,7 +317,6 @@
         document.getElementById('weatherIcon').innerHTML =
           `<i data-lucide="${info.i}" style="width:65px;height:65px;color: var(--primary-cyan);"></i>`;
 
-        // نصيحة المساعد
         let tip = `الطقس الآن ${info.t} ودرجة الحرارة ${temp}°م. `;
         if (temp >= 35) tip += 'الجو حار، اشرب ماء كثير وتجنب الشمس وقت الظهيرة.';
         else if (temp <= 10) tip += 'الجو بارد، البس ملابس ثقيلة.';
@@ -312,10 +324,9 @@
         if (data.current.weather_code >= 51 && data.current.weather_code <= 99) tip += ' ☔ خذ معك مظلة.';
         document.getElementById('aiAdvice').innerText = tip;
 
-        // الساعات: نبدأ من الساعة الحالية حسب توقيت الموقع
         const hourlyContainer = document.getElementById('hourlyContainer');
         hourlyContainer.innerHTML = '';
-        const nowKey = (data.current.time || '').slice(0, 13); // yyyy-mm-ddThh
+        const nowKey = (data.current.time || '').slice(0, 13);
         let start = data.hourly.time.findIndex(t => t.startsWith(nowKey));
         if (start < 0) start = 0;
         for (let i = start; i < Math.min(start + 24, data.hourly.time.length); i++) {
@@ -330,7 +341,6 @@
             </div>`;
         }
 
-        // الأيام
         const dailyContainer = document.getElementById('dailyContainer');
         dailyContainer.innerHTML = '';
         for (let i = 0; i < data.daily.time.length; i++) {
@@ -354,7 +364,6 @@
       }
     }
 
-    // ===== نظام الإنذارات =====
     let supabaseAlerts = [];
     let localAlerts = [];
 
@@ -399,7 +408,6 @@
     }
     function hideBanner() { document.getElementById('alertBanner').classList.remove('show'); }
 
-    // الدالة الرئيسية: أي إنذار يمر من هنا
     function triggerAlert(title, message, isTest) {
       if (isTest) localAlerts.unshift({ title, message });
       renderAlerts();
@@ -408,12 +416,18 @@
       beep();
       if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
       if ('Notification' in window && Notification.permission === 'granted') {
-        try { new Notification(title, { body: message }); } catch (e) { console.warn(e); }
+        const opts = { body: message, dir: 'rtl', lang: 'ar', vibrate: [400, 150, 400, 150, 400], requireInteraction: true };
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready
+            .then(reg => reg.showNotification(title, opts))
+            .catch(e => console.warn('SW notification failed', e));
+        } else {
+          try { new Notification(title, opts); } catch (e) { console.warn(e); }
+        }
       }
     }
 
     async function simulateEarthquake() {
-      // طلب إذن الإشعارات (لازم يكون بعد ضغطة المستخدم)
       if ('Notification' in window && Notification.permission === 'default') {
         try { await Notification.requestPermission(); } catch (e) {}
       }
