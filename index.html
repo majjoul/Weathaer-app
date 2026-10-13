@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" translate="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
   <title>تطبيق الطقس والإنذار الذكي</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -23,300 +24,49 @@
       --text-main: #ffffff;
       --text-muted: #a0aec0;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Tajawal', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      background: #080a0f;
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 15px;
-      overflow-x: hidden;
-    }
-
-    .app-container {
-      width: 100%;
-      max-width: 420px;
-      height: 780px;
-      background: var(--bg-gradient);
-      border-radius: 35px;
-      padding: 20px 16px 80px 16px;
-      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 242, 254, 0.15);
-      border: 1px solid var(--glass-border);
-      position: relative;
-      overflow: hidden;
-      backdrop-filter: blur(20px);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .glow-sphere-1 {
-      position: absolute;
-      top: -60px;
-      right: -60px;
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle, rgba(0, 242, 254, 0.3) 0%, transparent 70%);
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    .glow-sphere-2 {
-      position: absolute;
-      bottom: 100px;
-      left: -80px;
-      width: 220px;
-      height: 220px;
-      background: radial-gradient(circle, rgba(255, 51, 102, 0.25) 0%, transparent 70%);
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    .content-wrapper {
-      position: relative;
-      z-index: 1;
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      padding-bottom: 20px;
-    }
-
-    .content-wrapper::-webkit-scrollbar {
-      display: none;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .location-box {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .location-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-    }
-
-    .icon-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--glass-border);
-      color: #fff;
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    .page-section {
-      display: none;
-      flex-direction: column;
-      gap: 16px;
-      animation: fadeIn 0.3s ease-in-out;
-    }
-
-    .page-section.active {
-      display: flex;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .main-weather-card {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: 26px;
-      padding: 22px 18px;
-      text-align: center;
-      backdrop-filter: blur(15px);
-    }
-
-    .temp-number {
-      font-size: 3.5rem;
-      font-weight: 900;
-      background: linear-gradient(180deg, #ffffff 30%, #a0aec0 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      line-height: 1;
-      margin-bottom: 5px;
-    }
-
-    .weather-status {
-      font-size: 1.05rem;
-      color: var(--primary-cyan);
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-
-    .weather-stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 10px;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-    }
-
-    .stat-label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-    }
-
-    .stat-value {
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-
-    .hourly-scroll {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      padding-bottom: 5px;
-    }
-    .hourly-scroll::-webkit-scrollbar {
-      height: 4px;
-    }
-    .hourly-scroll::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.2);
-      border-radius: 4px;
-    }
-
-    .hour-card {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      padding: 12px 10px;
-      min-width: 65px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      backdrop-filter: blur(10px);
-    }
-
-    .hour-time {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-
-    .hour-temp {
-      font-size: 0.95rem;
-      font-weight: 700;
-    }
-
-    .daily-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .day-row {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      backdrop-filter: blur(10px);
-    }
-
-    .day-name {
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-
-    .day-temp {
-      font-weight: 700;
-      color: var(--primary-cyan);
-    }
-
-    .alert-card {
-      background: linear-gradient(135deg, rgba(255, 51, 102, 0.2) 0%, rgba(20, 10, 20, 0.6) 100%);
-      border: 1px solid var(--danger-red);
-      border-radius: 20px;
-      padding: 16px;
-      box-shadow: 0 10px 25px var(--danger-glow);
-    }
-
-    .alert-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--danger-red);
-      font-weight: 800;
-      font-size: 1rem;
-      margin-bottom: 6px;
-    }
-
-    .alert-body {
-      font-size: 0.88rem;
-      color: #ffd6e0;
-      line-height: 1.4;
-    }
-
-    .bottom-nav {
-      position: absolute;
-      bottom: 12px;
-      left: 16px;
-      right: 16px;
-      height: 60px;
-      background: rgba(13, 17, 23, 0.85);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      backdrop-filter: blur(20px);
-      z-index: 10;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .nav-item {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      cursor: pointer;
-      font-size: 0.7rem;
-      font-weight: 600;
-      transition: all 0.2s ease;
-    }
-
-    .nav-item.active {
-      color: var(--primary-cyan);
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: #080a0f; color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
+    .app-container { width: 100%; max-width: 420px; height: 780px; background: var(--bg-gradient); border-radius: 35px; padding: 20px 16px 80px 16px; box-shadow: 0 30px 60px rgba(0,0,0,.8), 0 0 40px rgba(0,242,254,.15); border: 1px solid var(--glass-border); position: relative; overflow: hidden; backdrop-filter: blur(20px); display: flex; flex-direction: column; }
+    .glow-sphere-1 { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,242,254,.3) 0%, transparent 70%); z-index: 0; pointer-events: none; }
+    .glow-sphere-2 { position: absolute; bottom: 100px; left: -80px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,51,102,.25) 0%, transparent 70%); z-index: 0; pointer-events: none; }
+    .content-wrapper { position: relative; z-index: 1; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
+    .content-wrapper::-webkit-scrollbar { display: none; }
+    .header { display: flex; justify-content: space-between; align-items: center; }
+    .location-box { display: flex; align-items: center; gap: 8px; }
+    .location-title { font-size: 1.05rem; font-weight: 700; }
+    .icon-btn { background: rgba(255,255,255,.08); border: 1px solid var(--glass-border); color: #fff; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .icon-btn.spin svg { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-section { display: none; flex-direction: column; gap: 16px; animation: fadeIn .3s ease-in-out; }
+    .page-section.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .main-weather-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 26px; padding: 22px 18px; text-align: center; backdrop-filter: blur(15px); }
+    .weather-icon-wrap { display: flex; justify-content: center; margin-bottom: 8px; }
+    .temp-number { font-size: 3.5rem; font-weight: 900; background: linear-gradient(180deg, #fff 30%, #a0aec0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 5px; direction: ltr; }
+    .weather-status { font-size: 1.05rem; color: var(--primary-cyan); font-weight: 700; margin-bottom: 16px; }
+    .weather-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: rgba(0,0,0,.25); padding: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,.05); }
+    .stat-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .stat-label { font-size: .7rem; color: var(--text-muted); }
+    .stat-value { font-size: .9rem; font-weight: 700; }
+    .hourly-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
+    .hourly-scroll::-webkit-scrollbar { height: 4px; }
+    .hourly-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 4px; }
+    .hour-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 12px 10px; min-width: 65px; display: flex; flex-direction: column; align-items: center; gap: 8px; backdrop-filter: blur(10px); }
+    .hour-time { font-size: .75rem; color: var(--text-muted); direction: ltr; }
+    .hour-temp { font-size: .95rem; font-weight: 700; direction: ltr; }
+    .daily-list { display: flex; flex-direction: column; gap: 10px; }
+    .day-row { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(10px); }
+    .day-name { font-weight: 700; font-size: .95rem; }
+    .day-temp { font-weight: 700; color: var(--primary-cyan); direction: ltr; }
+    .alert-card { background: linear-gradient(135deg, rgba(255,51,102,.2) 0%, rgba(20,10,20,.6) 100%); border: 1px solid var(--danger-red); border-radius: 20px; padding: 16px; box-shadow: 0 10px 25px var(--danger-glow); }
+    .alert-card.ok { background: linear-gradient(135deg, rgba(0,242,254,.12) 0%, rgba(20,10,20,.6) 100%); border-color: rgba(0,242,254,.4); box-shadow: none; }
+    .alert-card.ok .alert-header { color: var(--primary-cyan); }
+    .alert-card.ok .alert-body { color: #e2e8f0; }
+    .alert-header { display: flex; align-items: center; gap: 8px; color: var(--danger-red); font-weight: 800; font-size: 1rem; margin-bottom: 6px; }
+    .alert-body { font-size: .88rem; color: #ffd6e0; line-height: 1.4; }
+    .bottom-nav { position: absolute; bottom: 12px; left: 16px; right: 16px; height: 60px; background: rgba(13,17,23,.85); border: 1px solid var(--glass-border); border-radius: 20px; display: flex; justify-content: space-around; align-items: center; backdrop-filter: blur(20px); z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-size: .7rem; font-weight: 600; transition: all .2s ease; }
+    .nav-item.active { color: var(--primary-cyan); }
   </style>
 </head>
 <body>
@@ -332,96 +82,84 @@
           <i data-lucide="map-pin" style="color: var(--primary-cyan);"></i>
           <span class="location-title" id="cityName">جاري تحديد الموقع...</span>
         </div>
-        <button class="icon-btn" onclick="initApp()">
+        <button class="icon-btn" id="refreshBtn" onclick="initApp()">
           <i data-lucide="rotate-cw"></i>
         </button>
       </div>
 
-      <!-- الصفحة الأولى: الرئيسية -->
+      <!-- الرئيسية -->
       <div id="page-home" class="page-section active">
         <div class="main-weather-card">
           <div class="weather-icon-wrap" id="weatherIcon">
-            <i data-lucide="cloud-sun" size="65" style="color: var(--primary-cyan);"></i>
+            <i data-lucide="cloud-sun" style="width:65px;height:65px;color: var(--primary-cyan);"></i>
           </div>
           <div class="temp-number" id="tempDegree">--°</div>
           <div class="weather-status" id="weatherState">جاري التحميل...</div>
 
           <div class="weather-stats-grid">
             <div class="stat-item">
-              <i data-lucide="wind" size="16" style="color: var(--primary-cyan);"></i>
+              <i data-lucide="wind" style="width:16px;height:16px;color: var(--primary-cyan);"></i>
               <span class="stat-label">الرياح</span>
               <span class="stat-value" id="windSpeed">-- كم/س</span>
             </div>
             <div class="stat-item">
-              <i data-lucide="droplets" size="16" style="color: var(--primary-blue);"></i>
+              <i data-lucide="droplets" style="width:16px;height:16px;color: var(--primary-blue);"></i>
               <span class="stat-label">الرطوبة</span>
               <span class="stat-value" id="humidity">--%</span>
             </div>
             <div class="stat-item">
-              <i data-lucide="compass" size="16" style="color: var(--warning-amber);"></i>
+              <i data-lucide="compass" style="width:16px;height:16px;color: var(--warning-amber);"></i>
               <span class="stat-label">الحالة</span>
-              <span class="stat-value" id="windDir">مباشر</span>
+              <span class="stat-value" id="windDir">--</span>
             </div>
           </div>
         </div>
 
-        <div class="ai-assistant-card" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(79, 172, 254, 0.05) 100%); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 20px; padding: 16px;">
+        <div class="ai-assistant-card" style="background: linear-gradient(135deg, rgba(0,242,254,.12) 0%, rgba(79,172,254,.05) 100%); border: 1px solid rgba(0,242,254,.3); border-radius: 20px; padding: 16px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
             <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue)); display: flex; align-items: center; justify-content: center; color: #000;">
-              <i data-lucide="bot" size="16"></i>
+              <i data-lucide="bot" style="width:16px;height:16px;"></i>
             </div>
-            <span style="font-weight: 700; font-size: 0.95rem; color: var(--primary-cyan);">المساعد الذكي</span>
+            <span style="font-weight: 700; font-size: .95rem; color: var(--primary-cyan);">المساعد الذكي</span>
           </div>
-          <div id="aiAdvice" style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
+          <div id="aiAdvice" style="font-size: .88rem; color: #e2e8f0; line-height: 1.4; background: rgba(0,0,0,.2); padding: 10px; border-radius: 12px; border-right: 3px solid var(--primary-cyan);">
             جاري تحضير بيانات الطقس...
           </div>
         </div>
       </div>
 
-      <!-- الصفحة الثانية: الساعات -->
+      <!-- الساعات -->
       <div id="page-hourly" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">توقعات الساعات القادمة</h3>
         <div class="hourly-scroll" id="hourlyContainer"></div>
       </div>
 
-      <!-- الصفحة الثالثة: الأيام -->
+      <!-- الأيام -->
       <div id="page-daily" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">توقعات الأسبوع</h3>
         <div class="daily-list" id="dailyContainer"></div>
       </div>
 
-      <!-- الصفحة الرابعة: الإنذارات -->
+      <!-- الإنذارات -->
       <div id="page-alerts" class="page-section">
         <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">لوحة الإنذارات النشطة</h3>
-        <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px;">
-          <div class="alert-card">
-            <div class="alert-header">
-              <i data-lucide="siren"></i>
-              <span>لا توجد تحذيرات حالية</span>
-            </div>
-            <div class="alert-body">النظام يعمل بشكل سليم.</div>
-          </div>
-        </div>
+        <div id="alertsListContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
 
     </div>
 
     <nav class="bottom-nav">
       <button class="nav-item active" onclick="switchPage('home', this)">
-        <i data-lucide="home" size="20"></i>
-        <span>الرئيسية</span>
+        <i data-lucide="home" style="width:20px;height:20px;"></i><span>الرئيسية</span>
       </button>
       <button class="nav-item" onclick="switchPage('hourly', this)">
-        <i data-lucide="clock" size="20"></i>
-        <span>الساعات</span>
+        <i data-lucide="clock" style="width:20px;height:20px;"></i><span>الساعات</span>
       </button>
       <button class="nav-item" onclick="switchPage('daily', this)">
-        <i data-lucide="calendar" size="20"></i>
-        <span>الأسبوع</span>
+        <i data-lucide="calendar" style="width:20px;height:20px;"></i><span>الأسبوع</span>
       </button>
       <button class="nav-item" onclick="switchPage('alerts', this)">
-        <i data-lucide="bell" size="20"></i>
-        <span>الإنذارات</span>
+        <i data-lucide="bell" style="width:20px;height:20px;"></i><span>الإنذارات</span>
       </button>
     </nav>
   </div>
@@ -437,6 +175,45 @@
       console.error('Supabase Init Error:', e);
     }
 
+    // ===== أكواد حالة الطقس (WMO) =====
+    const WEATHER_CODES = {
+      0:  { t: 'صافي',             i: 'sun' },
+      1:  { t: 'غالباً صافي',       i: 'sun' },
+      2:  { t: 'غائم جزئياً',       i: 'cloud-sun' },
+      3:  { t: 'غائم',             i: 'cloud' },
+      45: { t: 'ضباب',             i: 'cloud-fog' },
+      48: { t: 'ضباب كثيف',        i: 'cloud-fog' },
+      51: { t: 'رذاذ خفيف',        i: 'cloud-drizzle' },
+      53: { t: 'رذاذ',             i: 'cloud-drizzle' },
+      55: { t: 'رذاذ كثيف',        i: 'cloud-drizzle' },
+      56: { t: 'رذاذ متجمد',       i: 'cloud-drizzle' },
+      57: { t: 'رذاذ متجمد كثيف',  i: 'cloud-drizzle' },
+      61: { t: 'مطر خفيف',         i: 'cloud-rain' },
+      63: { t: 'مطر',              i: 'cloud-rain' },
+      65: { t: 'مطر غزير',         i: 'cloud-rain' },
+      66: { t: 'مطر متجمد',        i: 'cloud-rain' },
+      67: { t: 'مطر متجمد غزير',   i: 'cloud-rain' },
+      71: { t: 'ثلج خفيف',         i: 'cloud-snow' },
+      73: { t: 'ثلج',              i: 'cloud-snow' },
+      75: { t: 'ثلج كثيف',         i: 'cloud-snow' },
+      77: { t: 'حبيبات ثلج',       i: 'cloud-snow' },
+      80: { t: 'زخات مطر خفيفة',   i: 'cloud-rain' },
+      81: { t: 'زخات مطر',         i: 'cloud-rain' },
+      82: { t: 'زخات مطر قوية',    i: 'cloud-rain' },
+      85: { t: 'زخات ثلج',         i: 'cloud-snow' },
+      86: { t: 'زخات ثلج كثيفة',   i: 'cloud-snow' },
+      95: { t: 'عاصفة رعدية',      i: 'cloud-lightning' },
+      96: { t: 'عاصفة رعدية مع برد', i: 'cloud-lightning' },
+      99: { t: 'عاصفة رعدية قوية',  i: 'cloud-lightning' }
+    };
+    function wInfo(code) {
+      return WEATHER_CODES[code] || { t: 'غير معروف', i: 'cloud' };
+    }
+
+    function escapeHTML(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
     function switchPage(pageId, btnElement) {
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
@@ -445,22 +222,29 @@
     }
 
     function initApp() {
+      const btn = document.getElementById('refreshBtn');
+      btn.classList.add('spin');
+      document.getElementById('weatherState').innerText = 'جاري التحميل...';
+
+      const done = () => setTimeout(() => btn.classList.remove('spin'), 600);
+
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
+          async (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            fetchWeatherData(lat, lon, `خط عرض: ${lat.toFixed(2)}, خط طول: ${lon.toFixed(2)}`);
+            await fetchWeatherData(lat, lon, `${lat.toFixed(2)}°، ${lon.toFixed(2)}°`);
+            done();
           },
-          (error) => {
-            console.warn('Geolocation denied or failed, using IP/Default fallback.');
-            // إذا رفض المستخدم، نستخدم إحداثيات تعتمد على IP أو افتراضي سريع
-            fetchWeatherData(48.8566, 2.3522, 'موقعك الحالي');
+          async () => {
+            console.warn('Geolocation denied or failed, using default.');
+            await fetchWeatherData(48.8566, 2.3522, 'الموقع الافتراضي (باريس)');
+            done();
           },
           { timeout: 7000, enableHighAccuracy: false }
         );
       } else {
-        fetchWeatherData(48.8566, 2.3522, 'موقعك الحالي');
+        fetchWeatherData(48.8566, 2.3522, 'الموقع الافتراضي (باريس)').then(done);
       }
       fetchSupabaseAlerts();
     }
@@ -469,30 +253,54 @@
       try {
         document.getElementById('cityName').innerText = locationLabel;
 
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min,time&timezone=auto`);
+        // ✅ الإصلاح: حذفنا "time" من daily (يرجع تلقائياً) وأضفنا weather_code
+        const url = 'https://api.open-meteo.com/v1/forecast'
+          + `?latitude=${lat}&longitude=${lon}`
+          + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code'
+          + '&hourly=temperature_2m,weather_code'
+          + '&daily=temperature_2m_max,temperature_2m_min,weather_code'
+          + '&timezone=auto';
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        if (!data.current) throw new Error('No current data');
 
         const temp = Math.round(data.current.temperature_2m);
-        document.getElementById('tempDegree').innerText = temp + '°';
-        document.getElementById('windSpeed').innerText = data.current.wind_speed_10m + ' كم/س';
-        document.getElementById('humidity').innerText = data.current.relative_humidity_2m + '%';
-        
-        let stateText = temp > 35 ? 'حرارة مرتفعة' : temp < 10 ? 'أجواء باردة' : 'أجواء معتدلة ومنعشة';
-        document.getElementById('weatherState').innerText = stateText;
-        document.getElementById('aiAdvice').innerText = `الطقس الحالي بدرجة حرارة ${temp}°م. استمتع بيومك وكن على حذر من التغيرات المفاجئة!`;
+        const wind = data.current.wind_speed_10m;
+        const hum = data.current.relative_humidity_2m;
+        const info = wInfo(data.current.weather_code);
 
-        // الساعات
+        document.getElementById('tempDegree').innerText = temp + '°';
+        document.getElementById('windSpeed').innerText = wind + ' كم/س';
+        document.getElementById('humidity').innerText = hum + '%';
+        document.getElementById('weatherState').innerText = info.t;
+        document.getElementById('windDir').innerText = info.t;
+        document.getElementById('weatherIcon').innerHTML =
+          `<i data-lucide="${info.i}" style="width:65px;height:65px;color: var(--primary-cyan);"></i>`;
+
+        // نصيحة المساعد
+        let tip = `الطقس الآن ${info.t} ودرجة الحرارة ${temp}°م. `;
+        if (temp >= 35) tip += 'الجو حار، اشرب ماء كثير وتجنب الشمس وقت الظهيرة.';
+        else if (temp <= 10) tip += 'الجو بارد، البس ملابس ثقيلة.';
+        else tip += 'أجواء معتدلة، استمتع بيومك!';
+        if (data.current.weather_code >= 51 && data.current.weather_code <= 99) tip += ' ☔ خذ معك مظلة.';
+        document.getElementById('aiAdvice').innerText = tip;
+
+        // الساعات: نبدأ من الساعة الحالية حسب توقيت الموقع
         const hourlyContainer = document.getElementById('hourlyContainer');
         hourlyContainer.innerHTML = '';
-        const nowIdx = new Date().getHours();
-        for (let i = nowIdx; i < nowIdx + 24; i++) {
-          if (!data.hourly.temperature_2m[i]) break;
+        const nowKey = (data.current.time || '').slice(0, 13); // yyyy-mm-ddThh
+        let start = data.hourly.time.findIndex(t => t.startsWith(nowKey));
+        if (start < 0) start = 0;
+        for (let i = start; i < Math.min(start + 24, data.hourly.time.length); i++) {
           const t = Math.round(data.hourly.temperature_2m[i]);
-          const timeStr = `${i % 24}:00`;
+          const hh = data.hourly.time[i].slice(11, 16);
+          const hi = wInfo(data.hourly.weather_code[i]);
           hourlyContainer.innerHTML += `
             <div class="hour-card">
-              <span class="hour-time">${timeStr}</span>
-              <i data-lucide="cloud-sun" size="20" style="color: var(--primary-cyan);"></i>
+              <span class="hour-time">${hh}</span>
+              <i data-lucide="${hi.i}" style="width:20px;height:20px;color: var(--primary-cyan);"></i>
               <span class="hour-temp">${t}°</span>
             </div>`;
         }
@@ -501,12 +309,14 @@
         const dailyContainer = document.getElementById('dailyContainer');
         dailyContainer.innerHTML = '';
         for (let i = 0; i < data.daily.time.length; i++) {
-          const date = new Date(data.daily.time[i]).toLocaleDateString('ar', { weekday: 'long' });
+          const dayName = new Date(data.daily.time[i] + 'T12:00:00').toLocaleDateString('ar', { weekday: 'long' });
           const maxT = Math.round(data.daily.temperature_2m_max[i]);
           const minT = Math.round(data.daily.temperature_2m_min[i]);
+          const di = wInfo(data.daily.weather_code[i]);
           dailyContainer.innerHTML += `
             <div class="day-row">
-              <span class="day-name">${date}</span>
+              <span class="day-name">${dayName}</span>
+              <i data-lucide="${di.i}" style="width:20px;height:20px;color: var(--primary-cyan);"></i>
               <span class="day-temp">${maxT}° / ${minT}°</span>
             </div>`;
         }
@@ -515,37 +325,44 @@
       } catch (err) {
         console.error('خطأ في الطقس:', err);
         document.getElementById('weatherState').innerText = 'تعذر جلب البيانات';
+        document.getElementById('aiAdvice').innerText = 'تحقق من الاتصال بالإنترنت ثم اضغط على زر التحديث.';
       }
     }
 
     async function fetchSupabaseAlerts() {
-      if (!supabaseClient) return;
+      const container = document.getElementById('alertsListContainer');
+      const emptyHTML = `
+        <div class="alert-card ok">
+          <div class="alert-header"><i data-lucide="shield-check"></i><span>لا توجد تحذيرات حالية</span></div>
+          <div class="alert-body">النظام يعمل بشكل سليم.</div>
+        </div>`;
+
+      if (!supabaseClient) { container.innerHTML = emptyHTML; lucide.createIcons(); return; }
       try {
-        const { data } = await supabaseClient
+        const { data, error } = await supabaseClient
           .from('weather_alerts')
           .select('*')
           .eq('is_active', true);
+        if (error) throw error;
 
-        const container = document.getElementById('alertsListContainer');
         if (data && data.length > 0) {
-          container.innerHTML = '';
-          data.forEach(alert => {
-            container.innerHTML += `
-              <div class="alert-card">
-                <div class="alert-header">
-                  <i data-lucide="siren"></i>
-                  <span>${alert.title}</span>
-                </div>
-                <div class="alert-body">${alert.message}</div>
-              </div>`;
-          });
+          container.innerHTML = data.map(a => `
+            <div class="alert-card">
+              <div class="alert-header"><i data-lucide="siren"></i><span>${escapeHTML(a.title)}</span></div>
+              <div class="alert-body">${escapeHTML(a.message)}</div>
+            </div>`).join('');
+        } else {
+          container.innerHTML = emptyHTML;
         }
         lucide.createIcons();
       } catch (err) {
         console.log('خطأ Supabase:', err);
+        container.innerHTML = emptyHTML;
+        lucide.createIcons();
       }
     }
 
+    lucide.createIcons();
     initApp();
   </script>
 </body>
