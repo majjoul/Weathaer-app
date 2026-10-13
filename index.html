@@ -35,10 +35,16 @@
     
     body.desktop-mode .app-container { max-width: 900px; height: 85vh; border-radius: 28px; padding: 25px 30px 80px 30px; }
 
-    /* جعل الخريطة الأساسية متناسقة وداكنة بأمان تام */
-    .map-tiles {
-      filter: brightness(0.75) contrast(110%);
+    /* إخفاء زر الحاسوب افتراضياً على الهواتف والأجهزة الصغيرة */
+    #desktopToggleBtn { display: none; }
+
+    /* إظهار زر الحاسوب فقط عندما تكون الشاشة أكبر من 900 بكسل أو في وضع الحاسوب */
+    @media (min-width: 900px) {
+      #desktopToggleBtn { display: flex; }
     }
+    body.desktop-mode #desktopToggleBtn { display: flex; }
+
+    .map-tiles { filter: brightness(0.75) contrast(110%); }
 
     .glow-sphere-1 { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,242,254,.3) 0%, transparent 70%); z-index: 0; pointer-events: none; }
     .glow-sphere-2 { position: absolute; bottom: 100px; left: -80px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,51,102,.25) 0%, transparent 70%); z-index: 0; pointer-events: none; }
@@ -574,13 +580,11 @@
 
       radarMapInstance = L.map('radarMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], 7);
 
-      // خريطة أساسية مجانية وموثوقة مع فئة مخصصة لتغميق الخلفية بأمان
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         className: 'map-tiles'
       }).addTo(radarMapInstance);
 
-      // طبقة الأمطار والسحب الحية بألوانها الأصلية الزاهية (أزرق، أخضر، أصفر)
       L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=1a31d2a1622b7c65345a34f826372d8e', {
         opacity: 0.85,
         maxZoom: 19
@@ -779,7 +783,7 @@
     }
 
     function showBanner(title, msg) {
-      document.getElementById('abTitle').innerText = title;
+      document.getElementById('abTitle').innerText.innerText = title;
       document.getElementById('abMsg').innerText = msg;
       document.getElementById('alertBanner').classList.add('show');
       clearTimeout(window._bannerTimer);
